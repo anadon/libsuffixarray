@@ -6,6 +6,9 @@ This is a C library to handle suffix array construction in a
 minimalistic, while still setting up all structures needed to replace
 any use of suffix trees.
 
+NOTE: Not all functionality is implemented, and what is is not 
+nessicarily implemented correctly.  This is under development software.
+
 ========================================================================
 BUILD AND INSTALL=======================================================
 ========================================================================
