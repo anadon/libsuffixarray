@@ -62,7 +62,7 @@ suffixArray makeSuffixArray(const unsigned char* inputSequence,
 /***********************************************************************
  * Destrory and free resources held by a suffixArray.
  **********************************************************************/
-void freeSuffixArray(suffixArray toFree);
+void freeSuffixArray(suffixArray *toFree);
 
 
 #endif
