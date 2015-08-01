@@ -1,6 +1,6 @@
 #!/bin/sh
 
-CFLAGS_DEBUG = -g -Wall -fstack-protector-all -lpthread -fpic
+CFLAGS_DEBUG = -g -Wall -fstack-protector-all -lpthread -fpic -D DEBUG
 CFLAGS = -pipe -march=native -O3 -lpthread -fpic
 
 STATIC_LINK = ar rcsu
@@ -13,17 +13,16 @@ SOURCE = suffixArray.c
 OBJECTS = suffixArray.o
 OBJECTS_DEBUG = suffixArray-debug.o
 
-STATICLIB = suffixarray.a
-SHAREDLIB = suffixarray.so
-STATICLIB_DEBUG = suffixarray-debug.a
-SHAREDLIB_DEBUG = suffixarray-debug.so
+STATICLIB = libsuffixarray.a
+SHAREDLIB = libsuffixarray.so
+STATICLIB_DEBUG = libsuffixarray-debug.a
+SHAREDLIB_DEBUG = libsuffixarray-debug.so
 
 
 
 ##STANDARD BUILD########################################################
 
 all : $(STATICLIB) $(SHAREDLIB)
-	
 
 $(STATICLIB) : $(OBJECTS)
 	$(STATIC_LINK) $(STATICLIB) $(OBJECTS)
@@ -40,6 +39,7 @@ $(OBJECTS) : $(SOURCE)
 ##DEBUG#################################################################
 
 debug : $(STATICLIB_DEBUG) $(SHAREDLIB_DEBUG)
+	cd test; make
 
 
 $(STATICLIB_DEBUG) : $(OBJECTS_DEBUG)
@@ -56,6 +56,7 @@ $(OBJECTS_DEBUG) : $(SOURCE)
 
 ##AUXILLARY FUNCTIONS###################################################
 
-clean : 
+clean :
 	rm -f $(OBJECTS) $(STATICLIB) $(SHAREDLIB) $(OBJECTS_DEBUG)
 	rm -f $(STATICLIB_DEBUG) $(SHAREDLIB_DEBUG)
+	cd test; make clean

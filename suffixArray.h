@@ -3,6 +3,7 @@
 #ifndef SUFFIX_ARRAY_H
 #define SUFFIX_ARRAY_H
 
+#include <stdbool.h>
 
 #define min(a,b) \
   ({ __typeof__ (a) _a = (a); \
@@ -24,11 +25,7 @@ typedef struct suffixArray{
 }suffixArray;
 
 
-
-void BWTRadixSort(suffixArray toSetup);
-
-
-void AppendIdentInit(suffixArray toSetup);
+suffixArray copySequenceToLocal(suffixArray toMod);
 	
 	
 suffixArray makeSuffixArray(const unsigned char* inputSequence, 
