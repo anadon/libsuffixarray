@@ -30,15 +30,15 @@
 
 
 typedef struct suffixArray{
-		/*This points to the sequence in memory.  The memory the sequence
-	 * is in may not belong to this object, but there is a function
-	 * available to make a  copy in local memory*/
-	const unsigned char *sequence;
-	unsigned char *internalSequence;
-	const size_t length;
+    /*This points to the sequence in memory.  The memory the sequence
+   * is in may not belong to this object, but there is a function
+   * available to make a  copy in local memory*/
+  const unsigned char *sequence;
+  unsigned char *internalSequence;
+  const size_t length;
 
-	size_t *bwtArray;
-	size_t *appendIdent;
+  size_t *bwtArray;
+  size_t *appendIdent;
 }suffixArray;
 
 
@@ -56,7 +56,7 @@ suffixArray copySequenceToLocal(suffixArray toMod);
  * not copy the original sequence array.
  **********************************************************************/
 suffixArray makeSuffixArray(const unsigned char* inputSequence,
-																							const size_t inputLength);
+                                              const size_t inputLength);
 
 
 /***********************************************************************

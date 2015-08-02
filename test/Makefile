@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-#	Tests Makefile
+# Tests Makefile
 #
 # Copyright (C) 2015  Josh Marshall
 #
@@ -31,9 +31,9 @@ EXEC = testBWT testLCP
 all : $(EXEC) $(SOURCE)
 
 $(EXEC) : $(SOURCE)
-	gcc $< $(CFLAGS) -o $@
+  gcc $< $(CFLAGS) -o $@
 
 ##AUXILLARY FUNCTIONS###################################################
 
 clean :
-	rm -f $(EXEC)
+  rm -f $(EXEC)
