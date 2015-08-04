@@ -4,16 +4,54 @@ DESCRIPTION=============================================================
 
 This is a C library to handle suffix array construction in a
 minimalistic, while still setting up all structures needed to replace
-any use of suffix trees.
-
-NOTE: Not all functionality is implemented, and what is is not 
-nessicarily implemented correctly.  This is under development software.
+any use of suffix trees.  For more details, see USAGE.
 
 ========================================================================
 BUILD AND INSTALL=======================================================
 ========================================================================
 
 make install
+
+========================================================================
+USAGE===================================================================
+========================================================================
+
+To create a usable suffix array object/structure, declare the following:
+
+  suffixArrayContainer example;
+
+To initialize *example*, set it to the following:
+
+  example = makeSuffixArray(sequence, sequenceLength);
+
+The above uses sequence as an unsigned char*, and sequenceLength as 
+a size_t.  The code is implemented such that it can expand to use all 
+the memory in a system.
+
+NOTE: It does not implement oppertunistic compression of small numbers
+to conserve memory, and there are no plans to implement such a feature.
+
+To access a given suffix index, use the following:
+
+  example.suffixArray[i]
+
+To access a given suffix common prefix length, use the following:
+
+  example.LCPArray[i]
+
+To access a given Burrow-Wheeler character, use the following:
+
+  example.sequence[example.suffixArray[i]]
+
+To access a given suffix string, use the following:
+
+  size_t startIndex = (1 + example.suffixArray[i]) % example.length;
+  for(size_t j = startIndex; j < example.length; j++)
+    example.sequence[j]
+
+To free resources, use the following:
+
+  freeSuffixArray(&example);
 
 ========================================================================
 AUTHORS=================================================================
