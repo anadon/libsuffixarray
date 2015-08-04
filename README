@@ -29,6 +29,10 @@ appropriate.
 USAGE===================================================================
 ========================================================================
 
+To use the library, include it using the following:
+
+  #include <suffixarray>
+
 To create a usable suffix array object/structure, declare the following:
 
   suffixArrayContainer example;
