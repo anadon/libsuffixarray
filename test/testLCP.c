@@ -20,31 +20,36 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
+
 #include "../suffixArray.h"
 
 int main(int argc, char** argv){
   
   char *original = argv[1];
-  char *expected = argv[2];
   
   printf("Constructing suffix array...\n"); fflush(stdout);
   
-  suffixArray toTest = makeSuffixArray((unsigned char*) original, strlen(original));
+  suffixArrayContainer toTest = makeSuffixArray((unsigned char*) original, strlen(original));
   
-  printf("BWT array construction is "); fflush(stdout);
+  printf("LCP array construction is "); fflush(stdout);
   
   for(int i = 0; i < strlen(original); i++){
-    if(original[toTest.bwtArray[i]] != expected[i]){
+    if(toTest.LCPArray[i] != atoi(argv[i+2])){
       printf("invalid!\n");
-      printf("Expected %s\n", expected);
-      printf("Recieved ");
+      printf("Expected ");
+			for(int k = 0; k < strlen(original); k++){
+				printf("%s", argv[k+2]);
+			}
+      printf("\nRecieved ");
       for(int k = 0; k < strlen(original); k++){
-        printf("%c", original[toTest.bwtArray[k]]);
+        printf("%lu", toTest.LCPArray[k]);
         fflush(stdout);
       }
-      
       printf("\n");
       
+			printSuffixArrayContainer(toTest);
+			
       return 1;
     }
   }

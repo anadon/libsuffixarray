@@ -80,7 +80,8 @@ void resizeArray(const size_t swapSubiterators[256],
 
 /***********************************************************************
  * WARNING: this function is dependant on toSort containing values in
- * acending order.  Some assumptions allow it to run faster.
+ * acending order.  Some assumptions allow it to run faster.  Currently
+ * O(n^2).
  *
  * This function is used to determine the start indexes for a
  * Burrow-Wheeler Transformation when applied to the source array in a
@@ -92,7 +93,7 @@ void resizeArray(const size_t swapSubiterators[256],
  * allocated, and correctly initalized to contain the start indexes for
  * each start of a BW array.
  **********************************************************************/
-void *BWTRadixSort(suffixArray *toSetup){
+void BWTRadixSort(suffixArrayContainer *toSetup){
   size_t **storage, *storageSublengths, *storageSubiterators, **swap;
   size_t *swapSublengths, *swapSubiterators, **tmp, *tmp2;
   unsigned char targetIndex;
@@ -173,13 +174,13 @@ void *BWTRadixSort(suffixArray *toSetup){
   swapSublengths = swapSubiterators = storageSublengths = NULL;
   tmp = swap = NULL;
 
-  toSetup->bwtArray = (size_t*) malloc(sizeof(size_t) * length);
+  toSetup->suffixArray = (size_t*) malloc(sizeof(size_t) * length);
 
   size_t placeIndex = 0;
   for(short i = 0; i < 256; i++){
     size_t queueLength = storageSubiterators[i];
     for(size_t j = 0; j < queueLength; j++){
-      toSetup->bwtArray[placeIndex++] = (length - 1 + storage[i][j]) % length;
+      toSetup->suffixArray[placeIndex++] = (length - 1 + storage[i][j]) % length;
 #ifdef DEBUG
       printf("%c\t", source[storage[i][j]]);
 #endif
@@ -189,7 +190,6 @@ void *BWTRadixSort(suffixArray *toSetup){
   free(storage);
   free(storageSubiterators);
 
-  return NULL;
 }
 
 
@@ -201,7 +201,7 @@ void *BWTRadixSort(suffixArray *toSetup){
  * the start of 2 nieghboring indexes.  This function should only be
  * called once over the lifetime of a suffixArray from makeSuffixArray()
  **********************************************************************/
-void *AppendIdentInit(suffixArray *toSetup){
+void AppendIdentInit(suffixArrayContainer *toSetup){
   const unsigned char *source = toSetup->sequence;
   const size_t inputLength = toSetup->length;
 
@@ -210,19 +210,19 @@ void *AppendIdentInit(suffixArray *toSetup){
   appendIdent[0] = 0; //can't have and first characters in common with
                         //nothing
   for(size_t i = 1; i < inputLength; i++){
-    size_t maxIndex = max(toSetup->bwtArray[i-1], toSetup->bwtArray[i]);
-    appendIdent[i] = 0;//NOTE TODO FIXME this is possible in O(n) time, not O(n^2) like this
+    size_t maxIndex = max((toSetup->suffixArray[i-1]+1) % toSetup->length, (toSetup->suffixArray[i]+1) % toSetup->length);
+    //NOTE TODO FIXME this is possible in O(n) time, not O(n^2) like this
     for(appendIdent[i] = 0; appendIdent[i] + maxIndex < inputLength;
                                                       appendIdent[i]++){
-      if(source[toSetup->bwtArray[i-1] + appendIdent[i]] !=
-                          source[toSetup->bwtArray[i] + appendIdent[i]])
+			//NOTE TODO FIXME: the following may be broken, but I don't think
+			//it is -- I'm just not 100% sure right now.
+      if(source[(toSetup->suffixArray[i-1] + appendIdent[i] + 1) % toSetup->length] !=
+											source[(toSetup->suffixArray[i] + appendIdent[i] + 1) % toSetup->length])
         break;
     }
   }
 
-  toSetup->appendIdent = appendIdent;
-
-  return NULL;
+  toSetup->LCPArray = appendIdent;
 }
 
 
@@ -231,37 +231,55 @@ void *AppendIdentInit(suffixArray *toSetup){
 ////////////////////////////////////////////////////////////////////////
 
 
-suffixArray makeSuffixArray(const unsigned char* inputSequence,
+suffixArrayContainer makeSuffixArray(const unsigned char* inputSequence,
                                               const size_t inputLength){
-  suffixArray toReturn = {inputSequence, NULL, inputLength, NULL, NULL};
+																								
+  suffixArrayContainer toReturn = {inputSequence, NULL, inputLength, NULL, NULL};
 
   if(inputLength == 0 || inputSequence == NULL){  exit(-1); }
 
   BWTRadixSort(&toReturn);
   AppendIdentInit(&toReturn);
-  toReturn.internalSequence = NULL;
 
   return toReturn;
 }
 
 
-suffixArray copySequenceToLocal(suffixArray toMod){
+suffixArrayContainer copySequenceToLocal(suffixArrayContainer toMod){
   if(toMod.internalSequence != NULL) return toMod;
 
   toMod.internalSequence = malloc(sizeof(size_t) * toMod.length);
   memcpy(toMod.internalSequence, toMod.sequence,
                                         sizeof(size_t) * toMod.length);
 
-  suffixArray toReturn = {toMod.internalSequence,
-                  toMod.internalSequence, toMod.length, toMod.bwtArray,
-                                                    toMod.appendIdent};
+  suffixArrayContainer toReturn = {toMod.internalSequence,
+								toMod.internalSequence, toMod.length, toMod.suffixArray,
+																												toMod.LCPArray};
 
   return toReturn;
 }
 
 
-void freeSuffixArray(suffixArray *toFree){
+void freeSuffixArray(suffixArrayContainer *toFree){
   if(toFree->internalSequence) free(toFree->internalSequence);
-  free(toFree->bwtArray);
-  free(toFree->appendIdent);
+  free(toFree->suffixArray);
+  free(toFree->LCPArray);
 }
+
+
+#ifdef DEBUG
+void printSuffixArrayContainer(suffixArrayContainer toDump){
+	printf("i\tsuftab\tlcptab\tbwttab\tSsuftab[i]\n"); fflush(stdout);
+	for(size_t i = 0; i < toDump.length; i++){
+		printf("%lu\t", i); fflush(stdout);
+		printf("%lu\t", toDump.suffixArray[i]); fflush(stdout);
+		printf("%lu\t", toDump.LCPArray[i]); fflush(stdout);
+		printf("%c\t", toDump.sequence[toDump.suffixArray[i]]); fflush(stdout);
+		for(size_t j = (1 + toDump.suffixArray[i]) % toDump.length; j < toDump.length; j++){
+			printf("%c", toDump.sequence[j]); fflush(stdout);
+		}
+		printf("\n");	fflush(stdout);
+	}
+}
+#endif
+

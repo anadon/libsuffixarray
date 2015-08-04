@@ -2,7 +2,7 @@
 #
 # Tests Makefile
 #
-# Copyright (C) 2015  Josh Marshall
+# Copyright (C) 2015	Josh Marshall
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -11,29 +11,32 @@
 #
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# along with this program.	If not, see <http://www.gnu.org/licenses/>.
 #
 
 
-CFLAGS = -g -Wall -fstack-protector-all ../libsuffixarray-debug.a -D DEBUG -lpthread
+CFLAGS = -g -Wall -fstack-protector-all ../libsuffixarray-debug.a -D DEBUG 
 
-SOURCE = testBWT.c testLCP.c
+SOURCE = testSA.c testLCP.c
 
-EXEC = testBWT testLCP
+EXEC = testSA testLCP
 
 
 ##STANDARD BUILD########################################################
 
-all : $(EXEC) $(SOURCE)
+##all : $(EXEC) $(SOURCE)
+all :
+	gcc testSA.c $(CFLAGS) -o testSA
+	gcc testLCP.c $(CFLAGS) -o testLCP
 
-$(EXEC) : $(SOURCE)
-  gcc $< $(CFLAGS) -o $@
+##$(EXEC) : $(SOURCE)
+##	gcc $< $(CFLAGS) -o $@
 
 ##AUXILLARY FUNCTIONS###################################################
 
 clean :
-  rm -f $(EXEC)
+	rm -f $(EXEC)

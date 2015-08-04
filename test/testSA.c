@@ -29,17 +29,17 @@ int main(int argc, char** argv){
   
   printf("Constructing suffix array...\n"); fflush(stdout);
   
-  suffixArray toTest = makeSuffixArray((unsigned char*) original, strlen(original));
+  suffixArrayContainer toTest = makeSuffixArray((unsigned char*) original, strlen(original));
   
   printf("BWT array construction is "); fflush(stdout);
   
   for(int i = 0; i < strlen(original); i++){
-    if(original[toTest.bwtArray[i]] != expected[i]){
+    if(original[toTest.suffixArray[i]] != expected[i]){
       printf("invalid!\n");
       printf("Expected %s\n", expected);
       printf("Recieved ");
       for(int k = 0; k < strlen(original); k++){
-        printf("%c", original[toTest.bwtArray[k]]);
+        printf("%c", original[toTest.suffixArray[k]]);
         fflush(stdout);
       }
       
