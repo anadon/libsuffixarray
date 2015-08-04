@@ -10,7 +10,20 @@ any use of suffix trees.  For more details, see USAGE.
 BUILD AND INSTALL=======================================================
 ========================================================================
 
-make install
+The standard build and install procedure is as follows:
+
+  make install
+
+For debugging problems related to the suffixArrayContainer structure and
+related code, verbose output is added when compiled using the following:
+
+  make debug
+
+Do be aware however, that this does not install the libraries into 
+system directories.  This is because this build is intended to only be
+useful for those debugging issues related to this library.  Such users
+are expected to be able to use, move, and link the libraries as is
+appropriate.
 
 ========================================================================
 USAGE===================================================================
@@ -53,8 +66,25 @@ To free resources, use the following:
 
   freeSuffixArray(&example);
 
+If and only if a debug build was made, a table of a given suffix array
+can be printed to stdout by calling the following:
+
+  printSuffixArrayContainer(example);
+
 ========================================================================
 AUTHORS=================================================================
 ========================================================================
 
 Josh Marshall
+
+========================================================================
+Additional Credits======================================================
+========================================================================
+
+This library closely implements the structures described in "Replacing
+suffix trees with enhances suffix arrays" authored by Mohamed Ibrahim 
+Abouelhoda, Stefan Kurtz, and Enno Ohlebusch.
+
+Mohamed I. Abouelhoda, Stefan Kurtz, Enno Ohlebusch. 2003. Replacing
+suffix trees with enhanced suffix arrays. Journal of Discrete Algorithms
+2 (2004), 53-86. DOI:http://dx.doi.org/10.1016/S1570-8667(03)00065-0
