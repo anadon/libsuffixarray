@@ -22,7 +22,7 @@
 #VERSION = .0.0.1
 MAJOR = .1
 MINOR = .0
-FIX = .0
+FIX = .1
 
 CFLAGS_DEBUG = -g -Wall -fstack-protector-all -lpthread -fpic -D DEBUG
 CFLAGS = -pipe -march=native -O3 -lpthread -fpic
@@ -32,10 +32,11 @@ STATIC_LINK_DEBUG = $(STATIC_LINK)
 SHARED_LINK = gcc -shared
 SHARED_LINK_DEBUG = gcc -shared -g
 
-SOURCE = suffixArray.c
+HEADERS = suffixarray.h
+SOURCE = suffixarray.c
 
-OBJECTS = suffixArray.o
-OBJECTS_DEBUG = suffixArray-debug.o
+OBJECTS = suffixarray.o
+OBJECTS_DEBUG = suffixarray-debug.o
 
 STATICLIB = libsuffixarray.a
 SHAREDLIB = libsuffixarray.so
@@ -57,7 +58,7 @@ $(SHAREDLIB) : $(OBJECTS)
 	$(SHARED_LINK) $(OBJECTS) -o $@
 
 
-$(OBJECTS) : $(SOURCE)
+$(OBJECTS) : $(SOURCE) $(HEADERS)
 	gcc -c $(CFLAGS_DEBUG) $< -o $@
 
 
@@ -75,7 +76,7 @@ $(SHAREDLIB_DEBUG) : $(OBJECT_DEBUG)
 	$(SHARED_LINK_DEBUG) $(OBJECTS_DEBUG) -o $(SHAREDLIB_DEBUG)
 
 
-$(OBJECTS_DEBUG) : $(SOURCE)
+$(OBJECTS_DEBUG) : $(SOURCE) $(HEADERS)
 	gcc -c $(CFLAGS_DEBUG) $< -o $@
 
 
@@ -86,16 +87,18 @@ clean :
 	cd test; make clean
 
 install : $(STATICLIB) $(SHAREDLIB)
+	install -C $(HEADERS) /usr/include/$(HEADERS)
 	install -C $(SHAREDLIB) /usr/lib/$(SHAREDLIB)$(MAJOR)$(MINOR)$(FIX)
 	install -C $(STATICLIB) /usr/lib/$(STATICLIB)$(MAJOR)$(MINOR)$(FIX)
-	ln -rs /usr/lib/$(SHAREDLIB)$(MAJOR)$(MINOR)$(FIX) /usr/lib/$(SHAREDLIB)$(MAJOR)$(MINOR)
-	ln -rs /usr/lib/$(SHAREDLIB)$(MAJOR)$(MINOR) /usr/lib/$(SHAREDLIB)$(MAJOR)
-	ln -rs /usr/lib/$(SHAREDLIB)$(MAJOR) /usr/lib/$(SHAREDLIB)
-	ln -rs /usr/lib/$(STATICLIB)$(MAJOR)$(MINOR)$(FIX) /usr/lib/$(STATICLIB)$(MAJOR)$(MINOR)
-	ln -rs /usr/lib/$(STATICLIB)$(MAJOR)$(MINOR) /usr/lib/$(STATICLIB)$(MAJOR)
-	ln -rs /usr/lib/$(STATICLIB)$(MAJOR) /usr/lib/$(STATICLIB)
+	ln -rsf /usr/lib/$(SHAREDLIB)$(MAJOR)$(MINOR)$(FIX) /usr/lib/$(SHAREDLIB)$(MAJOR)$(MINOR)
+	ln -rsf /usr/lib/$(SHAREDLIB)$(MAJOR)$(MINOR) /usr/lib/$(SHAREDLIB)$(MAJOR)
+	ln -rsf /usr/lib/$(SHAREDLIB)$(MAJOR) /usr/lib/$(SHAREDLIB)
+	ln -rsf /usr/lib/$(STATICLIB)$(MAJOR)$(MINOR)$(FIX) /usr/lib/$(STATICLIB)$(MAJOR)$(MINOR)
+	ln -rsf /usr/lib/$(STATICLIB)$(MAJOR)$(MINOR) /usr/lib/$(STATICLIB)$(MAJOR)
+	ln -rsf /usr/lib/$(STATICLIB)$(MAJOR) /usr/lib/$(STATICLIB)
 
 uninstall :
+	rm -f /usr/include/$(HEADERS)
 	rm -f /usr/lib/$(SHAREDLIB)$(MAJOR)$(MINOR)
 	rm -f /usr/lib/$(SHAREDLIB)$(MAJOR)$(MINOR)$(FIX) 
 	rm -f /usr/lib/$(SHAREDLIB)$(MAJOR) /usr/lib/$(SHAREDLIB)

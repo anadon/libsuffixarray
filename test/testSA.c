@@ -20,7 +20,7 @@
 
 #include <stdio.h>
 #include <string.h>
-#include "../suffixArray.h"
+#include "../suffixarray.h"
 
 int main(int argc, char** argv){
   

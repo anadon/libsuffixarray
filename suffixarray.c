@@ -20,7 +20,7 @@
 #include <stdlib.h>
 #include <errno.h>
 
-#include "suffixArray.h"
+#include "suffixarray.h"
 
 #ifdef DEBUG
 #include <stdio.h>
