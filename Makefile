@@ -1,4 +1,3 @@
-#!/bin/sh
 ##
 ##	Makefile for building and installing the suffix array libraries
 ##
@@ -19,7 +18,8 @@
 ##
 
 ##.major.minor.fix
-#VERSION = .0.0.1
+#VERSION = .1.0.1
+
 MAJOR = .1
 MINOR = .0
 FIX = .1
