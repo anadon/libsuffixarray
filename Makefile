@@ -21,8 +21,8 @@
 #VERSION = .1.0.1
 
 MAJOR = .1
-MINOR = .0
-FIX = .1
+MINOR = .1
+FIX = .0
 
 CFLAGS_DEBUG = -g -Wall -fstack-protector-all -fpic -D DEBUG
 CFLAGS = -pipe -march=native -O0 -fpic
