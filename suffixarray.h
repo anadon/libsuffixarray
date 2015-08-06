@@ -22,6 +22,9 @@
 
 #include <stdbool.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef struct suffixArrayContainer{
     /*This points to the sequence in memory.  The memory the sequence
@@ -79,6 +82,10 @@ void freeSuffixArray(suffixArrayContainer *toFree);
  * Dump table contents for debugging purposes
  **********************************************************************/
 void printSuffixArrayContainer(suffixArrayContainer toDump);
+#endif
+
+#ifdef __cplusplus
+}
 #endif
 
 #endif

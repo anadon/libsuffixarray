@@ -44,10 +44,12 @@ int main(int argc, char** argv){
       }
       
       printf("\n");
-      
+      freeSuffixArray(&toTest);
+			
       return 1;
     }
   }
   printf("valid!\n");
+	freeSuffixArray(&toTest);
   return 0;
 }

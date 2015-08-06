@@ -24,13 +24,13 @@ MAJOR = .1
 MINOR = .0
 FIX = .1
 
-CFLAGS_DEBUG = -g -Wall -fstack-protector-all -lpthread -fpic -D DEBUG
-CFLAGS = -pipe -march=native -O3 -lpthread -fpic
+CFLAGS_DEBUG = -g -Wall -fstack-protector-all -fpic -D DEBUG
+CFLAGS = -pipe -march=native -O0 -fpic
 
 STATIC_LINK = ar rcsu
 STATIC_LINK_DEBUG = $(STATIC_LINK)
-SHARED_LINK = gcc -shared
-SHARED_LINK_DEBUG = gcc -shared -g
+SHARED_LINK = gcc -shared -Wall -lc
+SHARED_LINK_DEBUG = $(SHARED_LINK) -g
 
 HEADERS = suffixarray.h
 SOURCE = suffixarray.c

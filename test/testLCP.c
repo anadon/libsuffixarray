@@ -50,9 +50,11 @@ int main(int argc, char** argv){
       
 			printSuffixArrayContainer(toTest);
 			
+      freeSuffixArray(&toTest);
       return 1;
     }
   }
   printf("valid!\n");
+	freeSuffixArray(&toTest);
   return 0;
 }

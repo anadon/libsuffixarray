@@ -76,6 +76,14 @@ can be printed to stdout by calling the following:
   printSuffixArrayContainer(example);
 
 ========================================================================
+NOTES===================================================================
+========================================================================
+
+This library does not play nicely with C++'s STL.  The library will not
+change in order to conform to C++'s poor design and behavior.
+http://blog.copton.net/archives/2007/10/13/stdvector/index.html
+
+========================================================================
 AUTHORS=================================================================
 ========================================================================
 
