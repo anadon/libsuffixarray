@@ -30,7 +30,7 @@ int main(int argc, char** argv){
   
   printf("Constructing suffix array...\n"); fflush(stdout);
   
-  suffixArrayContainer toTest = makeSuffixArray((unsigned char*) original, strlen(original));
+  suffixArray toTest = makeSuffixArray((unsigned char*) original, strlen(original));
   
   printf("LCP array construction is "); fflush(stdout);
   

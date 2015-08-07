@@ -19,11 +19,15 @@
 #include <string.h>
 #include <stdlib.h>
 #include <errno.h>
+#include <assert.h>
+#include <pthread.h>
+#include <unistd.h>
 
 #include "suffixarray.h"
 
 #ifdef DEBUG
 #include <stdio.h>
+//#undef DEBUG
 #endif
 
 
@@ -49,39 +53,151 @@
 ////////////////////////////////////////////////////////////////////////
 
 
-/*Conditionally enlarge an array, helper function for BTWRadixSort()*/
-void resizeArray(const size_t swapSubiterators[256],
-                                    const unsigned char *targetIndexIn,
-                    size_t swapSublengths[256], const size_t *lengthIn,
-                                                size_t **swap){
-  const unsigned char targetIndex = *targetIndexIn;
-  const size_t length = *lengthIn;
+typedef struct recursiveBucketSortArgs{
+  const unsigned char *source;
+  const size_t length;
+  size_t numSequences;
+  size_t depth;
+  size_t *toSort;
+}recursiveBucketSortArgs;
 
-  if(swapSubiterators[targetIndex]+1 < swapSublengths[targetIndex])
-    return;
 
-  size_t suggestedSize =
-                    min((swapSublengths[targetIndex] * 2 + 1), length);
-  swap[targetIndex] =
-            realloc(swap[targetIndex], suggestedSize * sizeof(size_t));
-
+void *recursiveBucketSort(void *input){
+  recursiveBucketSortArgs *args = input;
+  size_t *nextNumInBucket;
+  size_t *bucketIndexArray;
+  size_t **nextBuckets;
+  size_t endedSequence = 0;
+  size_t toReturnIndex = 0;
+	size_t j;
+  short numThreads = 0, nextThread = 0;
+  pthread_t *threads;
+	recursiveBucketSortArgs *toPass;
+  
 #ifdef DEBUG
-  if(swap[targetIndex] == NULL){
-    fprintf(stderr, "ALLOCATION FAILED");
-    exit(-ENOMEM);
-  }else{
-    fprintf(stderr, "ALLOCATION SUCCEEDED\n");
+  char *str1 = "Sorting %lu items at depth %lu { %lu:%c";
+  char *str2 = ", %lu:%c";
+  char *str3 = " } \n";
+  size_t strLength = strlen(str1) + (args->numSequences * strlen(str2) * 3) + strlen(str3) + 100;
+  char *toPrint = calloc(sizeof(char), strLength);
+  char *tmp = calloc(sizeof(char), strLength);
+  sprintf(tmp, str1, args->numSequences, args->depth, args->toSort[0], 
+                                        args->source[args->toSort[0]]);
+  strcat(toPrint, tmp);
+  
+  for(size_t i = 1; i < args->numSequences; i++){
+    memset(tmp, 0, strLength);
+    sprintf(tmp, str2, args->toSort[i], args->source[args->toSort[i]]);
+    strcat(toPrint, tmp);
   }
+  memset(tmp, 0, strLength);
+  sprintf(tmp, str3);
+  strcat(toPrint, tmp);
+  
+  write(fileno(stdout), toPrint, strlen(toPrint));
+  free(tmp);
+  free(toPrint);
 #endif
+  
+  nextNumInBucket = malloc(sizeof(size_t) * 256);
+head:
+	
+	//handle ultra-simple cases of sorting.
+	if(args->numSequences == 1) return args->toSort;
+  
+	for(j = 0; j < args->numSequences; j++){
+		if(args->toSort[j] + args->depth >= args->length){
+			endedSequence = args->toSort[j];
+			j++;
+			break;
+		}
+	}
+	for(; j < args->numSequences; j++)
+		args->toSort[j-1] = args->toSort[j];
+	
+	if(endedSequence != 0){
+		args->numSequences--;
+		args->toSort[args->numSequences] = endedSequence;
+		if(args->numSequences == 1){
+			return args->toSort;
+		}
+	}
+	
+  //prescan for allocation
+  memset(nextNumInBucket, 0, sizeof(size_t) * 256);
+  for(size_t i = 0; i < args->numSequences; i++)
+    nextNumInBucket[args->source[args->depth + args->toSort[i]]]++;
+	
+  for(short i = 0; i < 256; i++)
+		if(nextNumInBucket[i] > 1)
+      numThreads++;
 
-  swapSublengths[targetIndex] = suggestedSize;
+  
+	//scan for all same symbol early exit condition
+	for(short i = 0; i < 256; i++){
+		if(nextNumInBucket[i] == args->numSequences){
+			args->depth++;
+			//return recursiveBucketSort(args);
+			goto head;//a hack to critically reduce stack overhead
+		}
+	}
+
+  //allocate space
+	nextBuckets = malloc(sizeof(size_t*) * 256);
+  for(short i = 0; i < 256; i++)
+		if(nextNumInBucket[i] > 0)
+			nextBuckets[i] = malloc(sizeof(size_t) * nextNumInBucket[i]);
+  
+  threads = malloc(sizeof(pthread_t) * numThreads);
+	toPass = malloc(sizeof(recursiveBucketSortArgs) * numThreads);
+  
+  //partially sort
+	bucketIndexArray = calloc(sizeof(size_t), 256);
+  for(size_t i = 0; i < args->numSequences; i++){
+		unsigned char target = args->source[args->depth + args->toSort[i]];
+		nextBuckets[target][bucketIndexArray[target]++] = args->toSort[i];
+  }
+	free(bucketIndexArray);
+  
+  //delegate remaining sorting
+	nextThread = 0;
+  for(short i = 0; i < 256; i++){
+    if(nextNumInBucket[i] > 1){
+      recursiveBucketSortArgs tmp = {args->source, args->length, 
+                    nextNumInBucket[i], args->depth+1, nextBuckets[i]};
+      memcpy(&toPass[nextThread], &tmp, sizeof(recursiveBucketSortArgs));
+      pthread_create(&threads[nextThread], NULL, recursiveBucketSort, &toPass[nextThread]);
+      nextThread++;
+    }
+  }
+
+  //integrate sorted arrays
+  nextThread = 0;
+	toReturnIndex = 0;
+  for(short i = 0; i < 256; i++){
+		if(nextNumInBucket[i] == 1){
+      args->toSort[toReturnIndex++] = nextBuckets[i][0];
+      free(nextBuckets[i]);  nextBuckets[i] = NULL;
+    }else if(nextNumInBucket[i] > 1){
+      size_t *sorted;
+      pthread_join(threads[nextThread++], (void*) &sorted);
+      for(j = 0; j < nextNumInBucket[i]; j++){
+        args->toSort[toReturnIndex++] = sorted[j];
+      }
+      free(nextBuckets[i]);  nextBuckets[i] = NULL;
+    }
+  }
+  free(threads);  threads = NULL;
+  free(toPass);  toPass = NULL;
+	free(nextBuckets);
+	free(nextNumInBucket);
+  
+  return args->toSort;
 }
 
 
 /***********************************************************************
- * WARNING: this function is dependant on toSort containing values in
- * acending order.  Some assumptions allow it to run faster.  Currently
- * O(n^2).
+ * WARNING: this function may be incorrect.  
  *
  * This function is used to determine the start indexes for a
  * Burrow-Wheeler Transformation when applied to the source array in a
@@ -93,103 +209,17 @@ void resizeArray(const size_t swapSubiterators[256],
  * allocated, and correctly initalized to contain the start indexes for
  * each start of a BW array.
  **********************************************************************/
-void BWTRadixSort(suffixArrayContainer *toSetup){
-  size_t **storage, *storageSublengths, *storageSubiterators, **swap;
-  size_t *swapSublengths, *swapSubiterators, **tmp, *tmp2;
-  unsigned char targetIndex;
+size_t* BWTRadixSort(const unsigned char *source, const size_t length){
+  recursiveBucketSortArgs toPass = {source, length, length, 0, malloc(sizeof(size_t) * length)};
 
-  const unsigned char *source = toSetup->sequence;
-  const size_t length = toSetup->length;
-
-
-
-  swap                = calloc(sizeof(size_t*), 256);
-  storage             = calloc(sizeof(size_t*), 256);
-  storageSublengths   = calloc(sizeof(size_t), 256);
-  swapSublengths      = calloc(sizeof(size_t), 256);
-  storageSubiterators = calloc(sizeof(size_t), 256);
-
-  swapSubiterators    = malloc(sizeof(size_t) * 256);
-
-
-  //Non-comparatively sort the items
-  for(size_t h = 0; h < length; h++){
-    memset(swapSubiterators, 0, 256 * sizeof(size_t));
-    size_t earlyLoopExit = 0;
-
-    for(size_t i = 0; i < 256; i++){
-      if(earlyLoopExit >= h) break;
-      for(size_t j = 0; j < storageSubiterators[i]; j++){
-        targetIndex = source[((length-1) - h) + storage[i][j]];
-
-        resizeArray(swapSubiterators, &targetIndex, swapSublengths, &length, swap);
-
-        swap[targetIndex][swapSubiterators[targetIndex]++] = storage[i][j];
-      }
-      earlyLoopExit += storageSubiterators[i];
-    }
-#ifdef DEBUG
-    for(int i = 0; i < 256; i++){
-      if(swapSubiterators[i] == 0) continue;
-      printf("[%d]->:\t", i);
-      for(int j = 0; j < swapSubiterators[i]; j++){
-        printf("%lu\t", swap[i][j]);
-      }
-      printf("\n");
-    }
-    printf("==========================================================="
-                                                      "=============");
-    printf("\n\n");
-    fflush(stdout);
-#endif
-
-    //Since we know these are in ascending order we just take the
-    //first unsorted element since the rest pf the elements are too
-    //short to sort.  We then use this shortcut to speed copying the
-    //remainging elements. This should halve the time.
-    targetIndex = source[h];
-
-    resizeArray(swapSubiterators, &targetIndex, swapSublengths, &length, swap);
-
-    swap[targetIndex][swapSubiterators[targetIndex]++] = h;
-
-    tmp = storage;
-    storage = swap;
-    swap = tmp;
-
-    tmp2 = swapSubiterators;
-    swapSubiterators = storageSubiterators;
-    storageSubiterators = tmp2;
-
-    tmp2 = swapSublengths;
-    swapSublengths = storageSublengths;
-    storageSublengths = tmp2;
+  for(size_t i = 0; i < length; i++)  toPass.toSort[i] = i;
+  
+  size_t *toReturn = recursiveBucketSort(&toPass);
+  for(size_t i = 0; i < length; i++){
+    toReturn[i] = (toReturn[i] + length - 1)%length;
   }
 
-  for(int i = 0; i < 256; i++)  free(swap[i]);
-  free(swap);
-  free(swapSublengths);
-  free(swapSubiterators);
-  free(storageSublengths);
-  swapSublengths = swapSubiterators = storageSublengths = NULL;
-  tmp = swap = NULL;
-
-  toSetup->suffixArray = (size_t*) malloc(sizeof(size_t) * length);
-
-  size_t placeIndex = 0;
-  for(short i = 0; i < 256; i++){
-    size_t queueLength = storageSubiterators[i];
-    for(size_t j = 0; j < queueLength; j++){
-      toSetup->suffixArray[placeIndex++] = (length - 1 + storage[i][j]) % length;
-#ifdef DEBUG
-      printf("%c\t", source[storage[i][j]]);
-#endif
-    }
-    free(storage[i]);
-  }
-  free(storage);
-  free(storageSubiterators);
-
+  return toReturn;
 }
 
 
@@ -201,28 +231,24 @@ void BWTRadixSort(suffixArrayContainer *toSetup){
  * the start of 2 nieghboring indexes.  This function should only be
  * called once over the lifetime of a suffixArray from makeSuffixArray()
  **********************************************************************/
-void AppendIdentInit(suffixArrayContainer *toSetup){
-  const unsigned char *source = toSetup->sequence;
-  const size_t inputLength = toSetup->length;
+size_t* AppendIdentInit(const unsigned char *source, const size_t length, const size_t *bwtArray){
 
-  size_t *appendIdent = (size_t*) malloc(sizeof(size_t) * inputLength);
+  size_t *appendIdent = (size_t*) malloc(sizeof(size_t) * length);
 
   appendIdent[0] = 0; //can't have and first characters in common with
                         //nothing
-  for(size_t i = 1; i < inputLength; i++){
-    size_t maxIndex = max((toSetup->suffixArray[i-1]+1) % toSetup->length, (toSetup->suffixArray[i]+1) % toSetup->length);
+  for(size_t i = 1; i < length; i++){
+    size_t maxIndex = max((bwtArray[i-1]+1) % length, (bwtArray[i]+1) % length);
     //NOTE TODO FIXME this is possible in O(n) time, not O(n^2) like this
-    for(appendIdent[i] = 0; appendIdent[i] + maxIndex < inputLength;
+    for(appendIdent[i] = 0; appendIdent[i] + maxIndex < length;
                                                       appendIdent[i]++){
-			//NOTE TODO FIXME: the following may be broken, but I don't think
-			//it is -- I'm just not 100% sure right now.
-      if(source[(toSetup->suffixArray[i-1] + appendIdent[i] + 1) % toSetup->length] !=
-											source[(toSetup->suffixArray[i] + appendIdent[i] + 1) % toSetup->length])
+      if(source[(bwtArray[i-1] + appendIdent[i] + 1) % length] !=
+                      source[(bwtArray[i] + appendIdent[i] + 1) % length])
         break;
     }
   }
 
-  toSetup->LCPArray = appendIdent;
+  return appendIdent;
 }
 
 
@@ -231,55 +257,51 @@ void AppendIdentInit(suffixArrayContainer *toSetup){
 ////////////////////////////////////////////////////////////////////////
 
 
-suffixArrayContainer makeSuffixArray(const unsigned char* inputSequence,
+suffixArray makeSuffixArray(const unsigned char* inputSequence,
                                               const size_t inputLength){
-																								
-  suffixArrayContainer toReturn = {inputSequence, NULL, inputLength, NULL, NULL};
 
-  if(inputLength == 0 || inputSequence == NULL){  exit(-1); }
+  assert(inputLength > 0);
+  assert(inputSequence != NULL);
 
-  BWTRadixSort(&toReturn);
-  AppendIdentInit(&toReturn);
+  const size_t *bwtArray = BWTRadixSort(inputSequence, inputLength);
+  const size_t *LCPArray = AppendIdentInit(inputSequence, inputLength, bwtArray);
 
+  suffixArray toReturn = {inputSequence, false, inputLength, bwtArray, LCPArray};
   return toReturn;
 }
 
 
-suffixArrayContainer copySequenceToLocal(suffixArrayContainer toMod){
-  if(toMod.internalSequence != NULL) return toMod;
-
-  toMod.internalSequence = malloc(sizeof(size_t) * toMod.length);
-  memcpy(toMod.internalSequence, toMod.sequence,
-                                        sizeof(size_t) * toMod.length);
-
-  suffixArrayContainer toReturn = {toMod.internalSequence,
-								toMod.internalSequence, toMod.length, toMod.suffixArray,
-																												toMod.LCPArray};
-
+suffixArray copySequenceToLocal(suffixArray toMod){
+  assert(false == toMod.doIOwnSequence);
+  
+  unsigned char *tmp = malloc(sizeof(size_t) * toMod.length);
+  memcpy(tmp, toMod.sequence, sizeof(size_t) * toMod.length);
+  
+  suffixArray toReturn = {tmp, true, toMod.length, toMod.bwtArray, toMod.LCPArray};
   return toReturn;
 }
 
 
-void freeSuffixArray(suffixArrayContainer *toFree){
-  if(toFree->internalSequence) free(toFree->internalSequence);
-  free(toFree->suffixArray);
-  free(toFree->LCPArray);
+void freeSuffixArray(suffixArray *toFree){
+  suffixArrayCaster *force = (suffixArrayCaster*) toFree;
+  if(force->doIOwnSequence) free(force->sequence);
+  free(force->bwtArray);
+  free(force->LCPArray);
 }
 
 
 #ifdef DEBUG
-void printSuffixArrayContainer(suffixArrayContainer toDump){
-	printf("i\tsuftab\tlcptab\tbwttab\tSsuftab[i]\n"); fflush(stdout);
-	for(size_t i = 0; i < toDump.length; i++){
-		printf("%lu\t", i); fflush(stdout);
-		printf("%lu\t", toDump.suffixArray[i]); fflush(stdout);
-		printf("%lu\t", toDump.LCPArray[i]); fflush(stdout);
-		printf("%c\t", toDump.sequence[toDump.suffixArray[i]]); fflush(stdout);
-		for(size_t j = (1 + toDump.suffixArray[i]) % toDump.length; j < toDump.length; j++){
-			printf("%c", toDump.sequence[j]); fflush(stdout);
-		}
-		printf("\n");	fflush(stdout);
-	}
+void printSuffixArrayContainer(suffixArray toDump){
+  printf("i\tsuftab\tlcptab\tbwttab\tSsuftab[i]\n"); fflush(stdout);
+  for(size_t i = 0; i < toDump.length; i++){
+    printf("%lu\t", i); fflush(stdout);
+    printf("%lu\t", toDump.bwtArray[i]); fflush(stdout);
+    printf("%lu\t", toDump.LCPArray[i]); fflush(stdout);
+    printf("%c\t", toDump.sequence[toDump.bwtArray[i]]); fflush(stdout);
+    for(size_t j = (1 + toDump.bwtArray[i]) % toDump.length; j < toDump.length; j++){
+      printf("%c", toDump.sequence[j]); fflush(stdout);
+    }
+    printf("\n");  fflush(stdout);
+  }
 }
 #endif
-

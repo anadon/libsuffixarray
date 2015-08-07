@@ -24,13 +24,13 @@ MAJOR = .1
 MINOR = .1
 FIX = .0
 
-CFLAGS_DEBUG = -g -Wall -fstack-protector-all -fpic -D DEBUG
-CFLAGS = -pipe -march=native -O0 -fpic
+CFLAGS_DEBUG = -g -Wall -fstack-protector-all -lpthread -fpic -D DEBUG
+CFLAGS = -pipe -march=native -g -lpthread -fpic
 
 STATIC_LINK = ar rcsu
 STATIC_LINK_DEBUG = $(STATIC_LINK)
-SHARED_LINK = gcc -shared -Wall -lc
-SHARED_LINK_DEBUG = $(SHARED_LINK) -g
+SHARED_LINK = -shared -Wall -lc -lpthread -march=native -O3
+SHARED_LINK_DEBUG = $(SHARED_LINK) -g -lpthread
 
 HEADERS = suffixarray.h
 SOURCE = suffixarray.c
@@ -55,16 +55,16 @@ $(STATICLIB) : $(OBJECTS)
 
 
 $(SHAREDLIB) : $(OBJECTS)
-	$(SHARED_LINK) $(OBJECTS) -o $@
+	gcc $(OBJECTS) $(SHARED_LINK) -o $@
 
 
 $(OBJECTS) : $(SOURCE) $(HEADERS)
-	gcc -c $(CFLAGS_DEBUG) $< -o $@
+	gcc -c $(CFLAGS) $< -o $@
 
 
 ##DEBUG#################################################################
 
-debug : $(STATICLIB_DEBUG) $(SHAREDLIB_DEBUG)
+debug : $(STATICLIB_DEBUG) $(SHAREDLIB_DEBUG) $(STATICLIB)
 	cd test; make
 
 
@@ -73,7 +73,7 @@ $(STATICLIB_DEBUG) : $(OBJECTS_DEBUG)
 
 
 $(SHAREDLIB_DEBUG) : $(OBJECT_DEBUG)
-	$(SHARED_LINK_DEBUG) $(OBJECTS_DEBUG) -o $(SHAREDLIB_DEBUG)
+	gcc $(OBJECTS_DEBUG) $(SHARED_LINK_DEBUG) -o $(SHAREDLIB_DEBUG)
 
 
 $(OBJECTS_DEBUG) : $(SOURCE) $(HEADERS)

@@ -20,41 +20,42 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
+#include <sys/mman.h>
+#include <stdlib.h>
+#include <sys/resource.h>
+
 #include "../suffixarray.h"
 
 int main(int argc, char** argv){
   
-  char *original = argv[1];
-  char *expected = argv[2];
-	size_t length = strlen(original);
-  
+	time_t start, end;
+	FILE *fd = fopen(argv[1], "r");
+	fseek(fd, 0, SEEK_END);
+	size_t length = ftell(fd);
+	rewind(fd);
+	
+	void *sequence = malloc(length);
+	fread(sequence, 1, length, fd);
+	fclose(fd);
+	
+	//now to set the stack limit.  4 Hours finding this one out maybe. uhg
+	struct rlimit rl;
+	getrlimit(RLIMIT_STACK, &rl);
+	rl.rlim_cur = ((size_t)1) << 35;
+	if(0 != setrlimit(RLIMIT_STACK, &rl)){
+		printf("failed to set stack size\n");
+		exit(1);
+	}
+	
   printf("Constructing suffix array...\n"); fflush(stdout);
-  
-  suffixArray toTest = makeSuffixArray((unsigned char*) original, length);
-  
-  printf("BWT array construction is "); fflush(stdout);
-  
-  for(int i = 0; i < length; i++){
-    if(original[toTest.bwtArray[i]] != expected[i]){
-      printf("invalid!\n");
-      printf("Expected %s\n", expected);
-      printf("Recieved ");
-      for(int k = 0; k < length; k++){
-        printf("%c", original[toTest.bwtArray[k]]);
-        fflush(stdout);
-      }
-      
-      printf("\n");
-      for(int k = 0; k < length; k++)
-        printf("%lu, ", toTest.bwtArray[k]);
-      
-      printf("\n");
-      freeSuffixArray(&toTest);
-			
-      return 1;
-    }
-  }
-  printf("valid!\n");
+  time(&start);
+  suffixArray toTest = makeSuffixArray((unsigned char*) sequence, length);
+  time(&end);
+  printf("complete in %.f seconds\n", difftime(end, start)); fflush(stdout);
 	freeSuffixArray(&toTest);
+	free(sequence);
+	
+	
   return 0;
 }

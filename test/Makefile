@@ -19,11 +19,11 @@
 #
 
 
-CFLAGS = -g -Wall -fstack-protector-all ../libsuffixarray-debug.a -D DEBUG 
+CFLAGS = -g -Wall -fstack-protector-all ../libsuffixarray-debug.a -D DEBUG -lpthread
 
-SOURCE = testSA.c testLCP.c
+SOURCE = testSA.c testLCP.c testTime.c
 
-EXEC = testSA testLCP
+EXEC = testSA testLCP testTime
 
 
 ##STANDARD BUILD########################################################
@@ -32,6 +32,7 @@ EXEC = testSA testLCP
 all :
 	gcc testSA.c $(CFLAGS) -o testSA
 	gcc testLCP.c $(CFLAGS) -o testLCP
+	gcc testTime.c ../libsuffixarray.a -lpthread -g -march=native -o testTime
 
 ##$(EXEC) : $(SOURCE)
 ##	gcc $< $(CFLAGS) -o $@

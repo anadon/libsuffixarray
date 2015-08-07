@@ -14,7 +14,7 @@ The standard build and install procedure is as follows:
 
   make install
 
-For debugging problems related to the suffixArrayContainer structure and
+For debugging problems related to the suffixArray structure and
 related code, verbose output is added when compiled using the following:
 
   make debug
@@ -35,7 +35,7 @@ To use the library, include it using the following:
 
 To create a usable suffix array object/structure, declare the following:
 
-  suffixArrayContainer example;
+  suffixArray example;
 
 To initialize *example*, set it to the following:
 

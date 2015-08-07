@@ -26,12 +26,12 @@
 extern "C" {
 #endif
 
-typedef struct suffixArrayContainer{
+typedef struct suffixArray{
     /*This points to the sequence in memory.  The memory the sequence
    * is in may not belong to this object, but there is a function
    * available to make a  copy in local memory*/
   const unsigned char *sequence;
-  unsigned char *internalSequence;
+	const bool doIOwnSequence;
   const size_t length;
 
 	/*Since the Burrow-Wheeler transformation table can be derived from
@@ -45,20 +45,31 @@ typedef struct suffixArrayContainer{
 	 * increase CPU-overhead for something not everyone needs and can be
 	 * extrapolated from data that already exists.
 	 * */
-  size_t *suffixArray;
+  const size_t *bwtArray;
 	
 	/*The LCPArray defined the number of same continuous characters in 
 	 * sequence[suffixArray[i]] and sequence[suffixArray[i-1]] for LCP[i].
 	 * */
-  size_t *LCPArray;
-}suffixArrayContainer;
+  const size_t *LCPArray;
+}suffixArray;
+
+
+/***********************************************************************
+ * This is to help with assignment and more typical usage, but is not
+ * as proper.  Code using this will be slower.
+ **********************************************************************/
+typedef struct suffixArrayCaster{
+  unsigned char *sequence;
+	bool doIOwnSequence;
+  size_t length, *bwtArray, *LCPArray;
+}suffixArrayCaster;
 
 
 /***********************************************************************
  * Create a suffixArray from a passed suffixArray, effectively being a
  * copy, except that it now owns the original sequence memory.
  **********************************************************************/
-suffixArrayContainer copySequenceToLocal(suffixArrayContainer toMod);
+suffixArray copySequenceToLocal(suffixArray toMod);
 
 
 /***********************************************************************
@@ -67,22 +78,23 @@ suffixArrayContainer copySequenceToLocal(suffixArrayContainer toMod);
  * It does this in the most memory efficient manner possible, so it does
  * not copy the original sequence array.
  **********************************************************************/
-suffixArrayContainer makeSuffixArray(const unsigned char* inputSequence,
-                                              const size_t inputLength);
+suffixArray makeSuffixArray(const unsigned char* inputSequence,
+																							const size_t inputLength);
 
 
 /***********************************************************************
  * Destrory and free resources held by a suffixArray.
  **********************************************************************/
-void freeSuffixArray(suffixArrayContainer *toFree);
+void freeSuffixArray(suffixArray *toFree);
 
 
 #ifdef DEBUG
 /***********************************************************************
  * Dump table contents for debugging purposes
  **********************************************************************/
-void printSuffixArrayContainer(suffixArrayContainer toDump);
+void printSuffixArrayContainer(suffixArray toDump);
 #endif
+
 
 #ifdef __cplusplus
 }
