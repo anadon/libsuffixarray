@@ -5,3 +5,8 @@ testBWT
 testLCP
 testSA
 testTime
+huge.txt
+large.txt
+med.txt
+small.txt
+
