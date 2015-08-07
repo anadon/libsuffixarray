@@ -1,5 +1,5 @@
 ##
-##	Makefile for building and installing the suffix array libraries
+## Makefile for building and installing the suffix array libraries
 ##
 ## Copyright (C) 2015	Josh Marshall
 ##
@@ -14,14 +14,14 @@
 ## GNU General Public License for more details.
 ##
 ## You should have received a copy of the GNU General Public License
-## along with this program.	If not, see <http://www.gnu.org/licenses/>.
+## along with this program. If not, see <http://www.gnu.org/licenses/>.
 ##
 
 ##.major.minor.fix
-#VERSION = .1.0.1
+#VERSION = .$MAJOR.$MINOR.$FIX
 
 MAJOR = .1
-MINOR = .1
+MINOR = .2
 FIX = .0
 
 CFLAGS_DEBUG = -g -Wall -fstack-protector-all -lpthread -fpic -D DEBUG
