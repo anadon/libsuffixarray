@@ -19,7 +19,7 @@
 #
 
 
-CFLAGS = -g -Wall -fstack-protector-all ../libsuffixarray-debug.a -D DEBUG -lpthread
+CFLAGS = -g -Wall -fstack-protector-all ../libsuffixarray-debug.a -D DEBUG -lpthread -O0
 
 SOURCE = testSA.c testLCP.c testTime.c
 
@@ -32,7 +32,7 @@ EXEC = testSA testLCP testTime
 all :
 	gcc testSA.c $(CFLAGS) -o testSA
 	gcc testLCP.c $(CFLAGS) -o testLCP
-	gcc testTime.c ../libsuffixarray.a -lpthread -g -march=native -o testTime
+	gcc testTime.c $(CFLAGS) -o testTime
 
 ##$(EXEC) : $(SOURCE)
 ##	gcc $< $(CFLAGS) -o $@
@@ -41,3 +41,9 @@ all :
 
 clean :
 	rm -f $(EXEC)
+
+cleanAll :
+	cd ../ ; make clean
+
+deps :
+	cd ../ ; make debug

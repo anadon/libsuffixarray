@@ -20,17 +20,20 @@
 ##.major.minor.fix
 #VERSION = .$MAJOR.$MINOR.$FIX
 
-MAJOR = .1
-MINOR = .2
+MAJOR = .2
+MINOR = .0
 FIX = .0
 
-CFLAGS_DEBUG = -g -Wall -fstack-protector-all -lpthread -fpic -D DEBUG
-CFLAGS = -pipe -march=native -g -lpthread -fpic
+BUILD_CONFIG = LIGHT
+
+CFLAGS_DEBUG = -g -Wall -fstack-protector-all -lpthread -fpic -D DEBUG -D $(BUILD_CONFIG) -O0
+CFLAGS = -pipe -march=native -lpthread -fpic -D $(BUILD_CONFIG)
 
 STATIC_LINK = ar rcsu
 STATIC_LINK_DEBUG = $(STATIC_LINK)
-SHARED_LINK = -shared -Wall -lc -lpthread -march=native -O3
-SHARED_LINK_DEBUG = $(SHARED_LINK) -g -lpthread
+SHARED_LINK_COMMON = -shared -Wall -lc -march=native 
+SHARED_LINK = $(SHARED_LINK_COMMON) -O2
+SHARED_LINK_DEBUG = $(SHARED_LINK_COMMON) -g 
 
 HEADERS = suffixarray.h
 SOURCE = suffixarray.c
@@ -64,7 +67,7 @@ $(OBJECTS) : $(SOURCE) $(HEADERS)
 
 ##DEBUG#################################################################
 
-debug : $(STATICLIB_DEBUG) $(SHAREDLIB_DEBUG) $(STATICLIB)
+debug : $(STATICLIB_DEBUG) $(SHAREDLIB_DEBUG)
 	cd test; make
 
 

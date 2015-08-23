@@ -30,23 +30,24 @@ int main(int argc, char** argv){
   
   printf("Constructing suffix array...\n"); fflush(stdout);
   
-  suffixArray toTest = makeSuffixArray((unsigned char*) original, length);
+  SuffixArray toTest = makeSuffixArray((unsigned char*) original, length);
   
   printf("BWT array construction is "); fflush(stdout);
-  
-  for(int i = 0; i < length; i++){
-    if(original[toTest.bwtArray[i]] != expected[i]){
+  		
+	
+	for(size_t i = 0; i < length; i++){
+    if(original[(toTest.sa_data[i] + length -1)%length] != expected[i]){
       printf("invalid!\n");
       printf("Expected %s\n", expected);
       printf("Recieved ");
       for(int k = 0; k < length; k++){
-        printf("%c", original[toTest.bwtArray[k]]);
+        printf("%c", original[(toTest.sa_data[k] + length -1)%length]);
         fflush(stdout);
       }
       
       printf("\n");
       for(int k = 0; k < length; k++)
-        printf("%lu, ", toTest.bwtArray[k]);
+        printf("%lu, ", toTest.sa_data[k]);
       
       printf("\n");
       freeSuffixArray(&toTest);

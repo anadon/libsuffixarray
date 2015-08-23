@@ -25,6 +25,16 @@ useful for those debugging issues related to this library.  Such users
 are expected to be able to use, move, and link the libraries as is
 appropriate.
 
+There are 3 available build targets which are suited for different
+configurations.  These are "LIGHT", "HPC", and "CLUSTER".  The default
+build is light, as it uses the least system resources, has the fewest
+dependancies.  In order to direct make to build HPC or CLUSTER, pass the
+following argument to make:
+
+	BUILD_CONFIG=HPC
+	-or-
+	BUILD_CONFIG=CLUSTER
+
 ========================================================================
 USAGE===================================================================
 ========================================================================
