@@ -51,7 +51,7 @@ typedef struct SuffixArray{
    * the suffixArray here, a memory-using version is not used.  Instead,
    * all attempts to get a given BWT value should be as follows:
    *
-   * BWTArray[i] = (suffixArray[i] + length - 1)%length
+   * BWTArray[i] = source[(sa_data[i] + length - 1)%length];
    *
    * This is not inclused as a function because the nature of this
    * program requires minimalistic data and a function call could
@@ -67,7 +67,7 @@ typedef struct EnhancedSuffixArray{
 
   SuffixArray sa_struct;
   /*The LCPArray defined the number of same continuous characters in
-   * sequence[suffixArray[i]] and sequence[suffixArray[i-1]] for LCP[i].
+   * sequence[sa_data[i]] and sequence[sa_data[i-1]] for LCP[i].
    * */
   const size_t *LCPArray;
 }EnhancedSuffixArray;
