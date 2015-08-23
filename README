@@ -12,28 +12,18 @@ BUILD AND INSTALL=======================================================
 
 The standard build and install procedure is as follows:
 
-  make install
+  # make install
 
 For debugging problems related to the suffixArray structure and
 related code, verbose output is added when compiled using the following:
 
-  make debug
+  $ make debug
 
-Do be aware however, that this does not install the libraries into 
+Do be aware however, that this does not install the libraries into
 system directories.  This is because this build is intended to only be
 useful for those debugging issues related to this library.  Such users
 are expected to be able to use, move, and link the libraries as is
 appropriate.
-
-There are 3 available build targets which are suited for different
-configurations.  These are "LIGHT", "HPC", and "CLUSTER".  The default
-build is light, as it uses the least system resources, has the fewest
-dependancies.  In order to direct make to build HPC or CLUSTER, pass the
-following argument to make:
-
-	BUILD_CONFIG=HPC
-	-or-
-	BUILD_CONFIG=CLUSTER
 
 ========================================================================
 USAGE===================================================================
@@ -45,14 +35,14 @@ To use the library, include it using the following:
 
 To create a usable suffix array object/structure, declare the following:
 
-  suffixArray example;
+  SuffixArray example;
 
 To initialize *example*, set it to the following:
 
-  example = makeSuffixArray(sequence, sequenceLength);
+  exampleOne = makeSuffixArray(sequence, sequenceLength);
 
-The above uses sequence as an unsigned char*, and sequenceLength as 
-a size_t.  The code is implemented such that it can expand to use all 
+The above uses sequence as an unsigned char*, and sequenceLength as
+a size_t.  The code is implemented such that it can expand to use all
 the memory in a system.
 
 NOTE: It does not implement oppertunistic compression of small numbers
@@ -60,37 +50,52 @@ to conserve memory, and there are no plans to implement such a feature.
 
 To access a given suffix index, use the following:
 
-  example.suffixArray[i]
-
-To access a given suffix common prefix length, use the following:
-
-  example.LCPArray[i]
+  exampleOne.sa_data[i]
 
 To access a given Burrow-Wheeler character, use the following:
 
-  example.sequence[example.suffixArray[i]]
-
-To access a given suffix string, use the following:
-
-  size_t startIndex = (1 + example.suffixArray[i]) % example.length;
-  for(size_t j = startIndex; j < example.length; j++)
-    example.sequence[j]
+  exampleOne.sequence[(example.sa_data[i] + example.length - 1) % example.length]
 
 To free resources, use the following:
 
-  freeSuffixArray(&example);
+  freeSuffixArray(&exampleOne);
 
-If and only if a debug build was made, a table of a given suffix array
-can be printed to stdout by calling the following:
+There also exists EnhancedSuffixArray, which calculates the longest
+common prefix length (LCP) between any 2 given Suffix Array strings.
+An EnhancedSuffixArray much be constructed as follows:
 
-  printSuffixArrayContainer(example);
+  exampleTwo = makeEnhancedSuffixArray(exampleOne);
+
+To access LCP data, use the following:
+
+  exampleTwo.LCPArray[i]
+
+Due to C not supporting inheritence, the SuffixArray data may be access
+using the following:
+
+  exampleTwo.sa_struct
+
+Note that exampleTwo.sa_struct is exampleOne.
+
+In order to free an EnhancedSuffixArray, use the following:
+
+  freeEnhancedSuffixArray(&exampleTwo);
+
+Note that this also frees example one as if freeSuffixArray() has been
+run on &exampleOne.
+
+If and only if a debug build was made, a table of a given
+EnhancedSuffixArray can be printed to stdout by calling the following:
+
+  printSuffixArrayContainer(exampleTwo);
 
 ========================================================================
 NOTES===================================================================
 ========================================================================
 
 This library does not play nicely with C++'s STL.  The library will not
-change in order to conform to C++'s poor design and behavior.
+change in because the author disagrees with the C++ standards comittee.
+See the below post for more.
 http://blog.copton.net/archives/2007/10/13/stdvector/index.html
 
 ========================================================================
@@ -104,9 +109,18 @@ Additional Credits======================================================
 ========================================================================
 
 This library closely implements the structures described in "Replacing
-suffix trees with enhances suffix arrays" authored by Mohamed Ibrahim 
+suffix trees with enhances suffix arrays" authored by Mohamed Ibrahim
 Abouelhoda, Stefan Kurtz, and Enno Ohlebusch.
 
 Mohamed I. Abouelhoda, Stefan Kurtz, Enno Ohlebusch. 2003. Replacing
 suffix trees with enhanced suffix arrays. Journal of Discrete Algorithms
 2 (2004), 53-86. DOI:http://dx.doi.org/10.1016/S1570-8667(03)00065-0
+
+The Suffix Array Induced Sorting was implemented from, but does not
+strictly conform to the implementation in "Two Efficient Algorithms for
+Linear Time Suffix Array COnstruction" outlined by Ge Nong, Sen Zhang,
+and Wai Chan.
+
+Nong, G. Zhang, S. and Chan, W. H., Two Efficient Algorithms for Linear
+Time Suffix Array Construction. in IEEE Transactions on Computers Volume
+60, IEEE Computer Society, 1471-1484.
