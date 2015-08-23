@@ -38,9 +38,9 @@ int main(int argc, char** argv){
     if(toTest.LCPArray[i] != atoi(argv[i+2])){
       printf("invalid!\n");
       printf("Expected ");
-			for(int k = 0; k < strlen(original); k++){
-				printf("%s", argv[k+2]);
-			}
+      for(int k = 0; k < strlen(original); k++){
+        printf("%s", argv[k+2]);
+      }
       printf("\nRecieved ");
       for(int k = 0; k < strlen(original); k++){
         printf("%lu", toTest.LCPArray[k]);
@@ -48,13 +48,13 @@ int main(int argc, char** argv){
       }
       printf("\n");
       
-			printSuffixArrayContainer(toTest);
-			
+      printSuffixArrayContainer(toTest);
+      
       freeEnhancedSuffixArray(&toTest);
       return 1;
     }
   }
   printf("valid!\n");
-	freeEnhancedSuffixArray(&toTest);
+  freeEnhancedSuffixArray(&toTest);
   return 0;
 }

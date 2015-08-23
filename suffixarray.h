@@ -42,31 +42,31 @@ typedef struct SuffixArray{
    * is in may not belong to this object, but there is a function
    * available to make a  copy in local memory*/
   const unsigned char *sequence;
-	const bool doIOwnSequence;
+  const bool doIOwnSequence;
   const size_t length;
 
-	/*Since the Burrow-Wheeler transformation table can be derived from
-	 * the suffixArray here, a memory-using version is not used.  Instead,
-	 * all attempts to get a given BWT value should be as follows:
-	 * 
-	 * BWTArray[i] = (suffixArray[i] + length - 1)%length
-	 * 
-	 * This is not inclused as a function because the nature of this 
-	 * program requires minimalistic data and a function call could 
-	 * increase CPU-overhead for something not everyone needs and can be
-	 * extrapolated from data that already exists.
-	 * */
+  /*Since the Burrow-Wheeler transformation table can be derived from
+   * the suffixArray here, a memory-using version is not used.  Instead,
+   * all attempts to get a given BWT value should be as follows:
+   * 
+   * BWTArray[i] = (suffixArray[i] + length - 1)%length
+   * 
+   * This is not inclused as a function because the nature of this 
+   * program requires minimalistic data and a function call could 
+   * increase CPU-overhead for something not everyone needs and can be
+   * extrapolated from data that already exists.
+   * */
   const size_t *sa_data;
-	
+  
 }SuffixArray;
 
 
 typedef struct EnhancedSuffixArray{
-	
-	SuffixArray sa_struct;
-	/*The LCPArray defined the number of same continuous characters in 
-	 * sequence[suffixArray[i]] and sequence[suffixArray[i-1]] for LCP[i].
-	 * */
+  
+  SuffixArray sa_struct;
+  /*The LCPArray defined the number of same continuous characters in 
+   * sequence[suffixArray[i]] and sequence[suffixArray[i-1]] for LCP[i].
+   * */
   const size_t *LCPArray;
 }EnhancedSuffixArray;
 
@@ -77,13 +77,13 @@ typedef struct EnhancedSuffixArray{
  **********************************************************************/
 typedef struct SuffixArrayCaster{
   unsigned char *sequence;
-	bool doIOwnSequence;
+  bool doIOwnSequence;
   size_t length, *sa_data;
 }SuffixArrayCaster;
 
 
 typedef struct EnhancedSuffixArrayCaster{
-	SuffixArrayCaster sa_struct;
+  SuffixArrayCaster sa_struct;
   size_t *LCPArray;
 }EnhancedSuffixArrayCaster;
 
@@ -102,7 +102,7 @@ SuffixArray copySequenceToLocal(SuffixArray toMod);
  * not copy the original sequence array.
  **********************************************************************/
 SuffixArray makeSuffixArray(const unsigned char* inputSequence,
-																							const size_t inputLength);
+                                              const size_t inputLength);
 
 
 /***********************************************************************
