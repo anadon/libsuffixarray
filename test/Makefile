@@ -29,10 +29,10 @@ EXEC = testSA testLCP testTime
 ##STANDARD BUILD########################################################
 
 ##all : $(EXEC) $(SOURCE)
-all :
+all : ../libsuffixarray.a
 	gcc testSA.c $(CFLAGS) -o testSA
 	gcc testLCP.c $(CFLAGS) -o testLCP
-	gcc testTime.c $(CFLAGS) -o testTime
+	gcc testTime.c ../libsuffixarray.a -O3 -march=native -o testTime
 
 ##$(EXEC) : $(SOURCE)
 ##	gcc $< $(CFLAGS) -o $@
@@ -46,4 +46,5 @@ cleanAll :
 	cd ../ ; make clean
 
 deps :
-	cd ../ ; make debug
+	cd ../ ; make debug ; make all
+	make all
