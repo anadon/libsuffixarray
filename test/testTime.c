@@ -50,12 +50,17 @@ int main(int argc, char** argv){
 	
   printf("Constructing suffix array...\n"); fflush(stdout);
   time(&start);
-  suffixArray toTest = makeSuffixArray((unsigned char*) sequence, length);
+  SuffixArray toTest = makeSuffixArray((unsigned char*) sequence, length);
   time(&end);
   printf("complete in %.f seconds\n", difftime(end, start)); fflush(stdout);
-	freeSuffixArray(&toTest);
-	free(sequence);
+  printf("Constructing enhanced suffix array from suffix array...\n"); fflush(stdout);
+  time(&start);
+  EnhancedSuffixArray toTest2 = makeEnhancedSuffixArray(toTest);
+  time(&end);
+  printf("complete in %.f seconds\n", difftime(end, start)); fflush(stdout);
 	
+	freeEnhancedSuffixArray(&toTest2);
+	free(sequence);
 	
   return 0;
 }
