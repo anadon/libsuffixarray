@@ -50,7 +50,7 @@
 void printBucket(size_t *bucket[256], size_t bucketSize[256]){
   for(int i = 0; i < 256; i++){
     if(bucketSize[i] == 0) continue;
-    fprintf(stderr, "("); 
+    fprintf(stderr, "(");
     for(int j = 0; j < bucketSize[i] - 1; j++){
       fprintf(stderr, "%lu, ", bucket[i][j]);
     }
@@ -72,7 +72,7 @@ void printLMSandLS(unsigned char* LMSandLS, size_t length){
 
 
 /***********************************************************************
- * WARNING: this function may be incorrect.  
+ * WARNING: this function may be incorrect.
  *
  * This function is used to determine the start indexes for a
  * Burrow-Wheeler Transformation when applied to the source array in a
@@ -91,10 +91,10 @@ size_t *sais(const unsigned char *source, const size_t length, size_t *data){
   size_t bucketFrontCounter[256];
   size_t bucketEndCounter[256];
   unsigned char *LMSandLS;
-  
+
   //INITIALIZATION//////////////////////////////////////////////////////
   LMSandLS = malloc(sizeof(unsigned char) * length);
-  
+
   /*prescan for buckets************************************************/
   //calculate bucket sizes
   memset(bucketSize, 0, sizeof(size_t)* 256);
@@ -107,25 +107,25 @@ size_t *sais(const unsigned char *source, const size_t length, size_t *data){
   bucket[0] = data;
   for(short i = 1; i < 255; i++)
     bucket[i] = &bucket[i-1][bucketSize[i-1]];
-  
+
 #ifdef DEBUG
   //first place where bucket data can be printed
   fprintf(stderr, "%lu\n", length);
   printBucket(bucket, bucketSize);
 #endif
-  
+
   //MAIN PROCESSING/////////////////////////////////////////////////////
   /*set up L, S, and LMS metadata**************************************/
   /*0 = undefined, 1 = L, 2 = S, 3 = LMS*/
   LMSandLS[length-1] = 1;
-  /*The paper stipulates an additional universally minimal character 
-   * which is definitionally LMS, but the addition of a control 
-   * character is pedantic and doesn't allow a general purpose 
-   * implementation.  What is done here pre-empts that approach with 
-   * forcing the last character to be a L characters, which keeps 
+  /*The paper stipulates an additional universally minimal character
+   * which is definitionally LMS, but the addition of a control
+   * character is pedantic and doesn't allow a general purpose
+   * implementation.  What is done here pre-empts that approach with
+   * forcing the last character to be a L characters, which keeps
    * mathematical corectness but requires minor tweaks further on.*/
-  
-  //Assign characters' values right to left (end to beginning) for L, S, 
+
+  //Assign characters' values right to left (end to beginning) for L, S,
   //and LMS
   for(size_t i = length-2; i != ((size_t)0)-1; i--){
     if(source[i] > source[i+1]){
@@ -149,14 +149,14 @@ size_t *sais(const unsigned char *source, const size_t length, size_t *data){
 
 #ifdef DEBUG
   printLMSandLS(LMSandLS, length);
-  
+
   fprintf(stderr, "\n\nAdding to buckets\n\n\n");
 #endif
 
   /*Add entries to buckets*********************************************/
   //This is supposed to prepare the data to be induce sorted.
-  
-  //LMS type right-to-left scan -- Add LMS entries to the ends of 
+
+  //LMS type right-to-left scan -- Add LMS entries to the ends of
   //various buckets going from right to left.  The result is partially
   //full buckets with LMS entries in acending order.
   for(size_t i = 0; i < length; i++){
@@ -169,11 +169,11 @@ size_t *sais(const unsigned char *source, const size_t length, size_t *data){
 #endif
     }
   }
-  
+
   //inducing SA from SA1 step 2
   //L type left-to-right scan, not exactly a direct reasoning for this,
-  //please refer to the paper.  Bounds checking was used in place of 
-  //checking for negative values so that -1 didn't have to be used, 
+  //please refer to the paper.  Bounds checking was used in place of
+  //checking for negative values so that -1 didn't have to be used,
   //allowing architentually maximal string length.
   bucket[source[length-1]][bucketFrontCounter[source[length-1]]] = length-1;
   bucketFrontCounter[source[length-1]]++;
@@ -181,7 +181,7 @@ size_t *sais(const unsigned char *source, const size_t length, size_t *data){
     for(size_t j = 0; j < bucketFrontCounter[i]; j++){
       size_t target = bucket[i][j]-1;
       if(target == ((size_t)0)-1) continue;
-      
+
       if(LMSandLS[target] == 1){
         bucket[source[target]][bucketFrontCounter[source[target]]] = target;
         bucketFrontCounter[source[target]]++;
@@ -193,7 +193,7 @@ size_t *sais(const unsigned char *source, const size_t length, size_t *data){
     for(size_t j = bucketSize[i] - bucketEndCounter[i]; j < bucketSize[i]; j++){
       size_t target = bucket[i][j]-1;
       if(target == ((size_t)0)-1) continue;
-      
+
       if(LMSandLS[target] == 1){
         bucket[source[target]][bucketFrontCounter[source[target]]] = target;
         bucketFrontCounter[source[target]]++;
@@ -203,20 +203,20 @@ size_t *sais(const unsigned char *source, const size_t length, size_t *data){
       }
     }
   }
-  
+
   //step 3 of setting up SA
   //S type right to left scan.  Still difficult to follow reasoning.
-  //The paper seems to suggest looping over all values and some other 
+  //The paper seems to suggest looping over all values and some other
   //various checking to make sure they're valid.  Bounds checking here
-  //is again used.  It also has the benefit of more effectively 
-  //enforcing a reduction in the size of SA1 than the outlined 
+  //is again used.  It also has the benefit of more effectively
+  //enforcing a reduction in the size of SA1 than the outlined
   //algorithm.
   for(int i = 255; i >= 0; i--){
     if(bucketSize[i] == 0) continue;
     for(size_t j = bucketSize[i] - 1; j >= bucketSize[i] - bucketEndCounter[i] && j != ((size_t)0)-1; j--){
       size_t target = bucket[i][j]-1;
       if(target != ((size_t)0)-1){
-      
+
         if(LMSandLS[target] == 2){
           unsigned char target2 = source[target];
           bucket[target2][bucketSize[target2] - (bucketEndCounter[target2]+1)] = target;
@@ -227,11 +227,11 @@ size_t *sais(const unsigned char *source, const size_t length, size_t *data){
         }
       }
     }
-      
+
     for(size_t j = bucketFrontCounter[i] - 1; j != ((size_t)0)-1; j--){
       size_t target = bucket[i][j]-1;
       if(target == ((size_t)0)-1) continue;
-      
+
       if(LMSandLS[target] == 2){
         unsigned char target2 = source[target];
         bucket[target2][bucketSize[target2] - (bucketEndCounter[target2]+1)] = target;
@@ -242,13 +242,13 @@ size_t *sais(const unsigned char *source, const size_t length, size_t *data){
       }
     }
   }
-  
+
   /*Start induction****************************************************/
-  
+
 #ifdef DEBUG
   fprintf(stderr, "\n\nStarting Induction\n\n\n");
 #endif
-  
+
   memset(bucketEndCounter, 0, sizeof(size_t)* 256);
   //S type right to left scan.  Still difficult to follow reasoning, but
   //it seems to work.
@@ -257,7 +257,7 @@ size_t *sais(const unsigned char *source, const size_t length, size_t *data){
     for(size_t j = bucketSize[i] - 1; j != ((size_t)0)-1; j--){
       size_t target = bucket[i][j]-1;
       if(target == ((size_t)0)-1) continue;
-      
+
       if(LMSandLS[target] != 1){
         unsigned char target2 = source[target];
         bucket[target2][(bucketSize[target2] - bucketEndCounter[target2]) - 1] = target;
@@ -268,11 +268,11 @@ size_t *sais(const unsigned char *source, const size_t length, size_t *data){
       }
     }
   }
-  
+
   //CLEANUP AND RETURN//////////////////////////////////////////////////
-  
+
   free(LMSandLS);
-  
+
   return data;
 }
 
@@ -319,8 +319,8 @@ SuffixArray makeSuffixArray(const unsigned char* inputSequence,
   fprintf(stderr, "Initializing BWTArray\n"); fflush(stdout);
 #endif
 
-  SuffixArray toReturn = {inputSequence, false, inputLength, 
-                                        sais(inputSequence, inputLength, 
+  SuffixArray toReturn = {inputSequence, false, inputLength,
+                                        sais(inputSequence, inputLength,
                                 malloc(sizeof(size_t) * inputLength))};
 
 #ifdef DEBUG
@@ -337,8 +337,8 @@ EnhancedSuffixArray makeEnhancedSuffixArray(const SuffixArray toProcess){
   fprintf(stderr, "Initializing EnhancedSuffixArray\n"); fflush(stdout);
 #endif
 
-  EnhancedSuffixArray toReturn = {toProcess, 
-        AppendIdentInit(toProcess.sequence, toProcess.length, 
+  EnhancedSuffixArray toReturn = {toProcess,
+        AppendIdentInit(toProcess.sequence, toProcess.length,
                                                     toProcess.sa_data)};
 
 #ifdef DEBUG
@@ -351,10 +351,10 @@ EnhancedSuffixArray makeEnhancedSuffixArray(const SuffixArray toProcess){
 
 SuffixArray copySequenceToLocal(const SuffixArray toMod){
   assert(false == toMod.doIOwnSequence);
-  
+
   unsigned char *tmp = malloc(sizeof(size_t) * toMod.length);
   memcpy(tmp, toMod.sequence, sizeof(size_t) * toMod.length);
-  
+
   SuffixArray toReturn = {tmp, true, toMod.length, toMod.sa_data};
   return toReturn;
 }

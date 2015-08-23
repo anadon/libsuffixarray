@@ -24,6 +24,8 @@
 #include <stdbool.h>
 #endif
 
+//Add alternate naming schemes so that naming conventions can be
+//consistant for different style guides.
 #define suffixArray SuffixArray
 #define SA SuffixArray
 #define sa SuffixArray
@@ -38,7 +40,7 @@ extern "C" {
 #endif
 
 typedef struct SuffixArray{
-    /*This points to the sequence in memory.  The memory the sequence
+  /*This points to the sequence in memory.  The memory the sequence
    * is in may not belong to this object, but there is a function
    * available to make a  copy in local memory*/
   const unsigned char *sequence;
@@ -48,23 +50,23 @@ typedef struct SuffixArray{
   /*Since the Burrow-Wheeler transformation table can be derived from
    * the suffixArray here, a memory-using version is not used.  Instead,
    * all attempts to get a given BWT value should be as follows:
-   * 
+   *
    * BWTArray[i] = (suffixArray[i] + length - 1)%length
-   * 
-   * This is not inclused as a function because the nature of this 
-   * program requires minimalistic data and a function call could 
+   *
+   * This is not inclused as a function because the nature of this
+   * program requires minimalistic data and a function call could
    * increase CPU-overhead for something not everyone needs and can be
    * extrapolated from data that already exists.
    * */
   const size_t *sa_data;
-  
+
 }SuffixArray;
 
 
 typedef struct EnhancedSuffixArray{
-  
+
   SuffixArray sa_struct;
-  /*The LCPArray defined the number of same continuous characters in 
+  /*The LCPArray defined the number of same continuous characters in
    * sequence[suffixArray[i]] and sequence[suffixArray[i-1]] for LCP[i].
    * */
   const size_t *LCPArray;
@@ -73,7 +75,7 @@ typedef struct EnhancedSuffixArray{
 
 /***********************************************************************
  * This is to help with assignment and more typical usage, but is not
- * as proper.  Code using this will be slower.
+ * as proper.  Code using this may be slower.
  **********************************************************************/
 typedef struct SuffixArrayCaster{
   unsigned char *sequence;
@@ -90,7 +92,8 @@ typedef struct EnhancedSuffixArrayCaster{
 
 /***********************************************************************
  * Create a suffixArray from a passed suffixArray, effectively being a
- * copy, except that it now owns the original sequence memory.
+ * copy, except that it now owns the original sequence memory.  This is
+ * included for better memory paradeigm corectness.
  **********************************************************************/
 SuffixArray copySequenceToLocal(SuffixArray toMod);
 

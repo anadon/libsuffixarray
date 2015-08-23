@@ -31,9 +31,9 @@ CFLAGS = -pipe -march=native -lpthread -fpic -D $(BUILD_CONFIG)
 
 STATIC_LINK = ar rcsu
 STATIC_LINK_DEBUG = $(STATIC_LINK)
-SHARED_LINK_COMMON = -shared -Wall -lc -march=native 
+SHARED_LINK_COMMON = -shared -Wall -lc -march=native
 SHARED_LINK = $(SHARED_LINK_COMMON) -O2
-SHARED_LINK_DEBUG = $(SHARED_LINK_COMMON) -g 
+SHARED_LINK_DEBUG = $(SHARED_LINK_COMMON) -g
 
 HEADERS = suffixarray.h
 SOURCE = suffixarray.c
@@ -67,7 +67,7 @@ $(OBJECTS) : $(SOURCE) $(HEADERS)
 
 ##DEBUG#################################################################
 
-debug : $(STATICLIB_DEBUG) $(SHAREDLIB_DEBUG)
+debug : $(STATICLIB_DEBUG) $(SHAREDLIB_DEBUG) $(STATICLIB)
 	cd test; make
 
 
@@ -103,8 +103,8 @@ install : $(STATICLIB) $(SHAREDLIB)
 uninstall :
 	rm -f /usr/include/$(HEADERS)
 	rm -f /usr/lib/$(SHAREDLIB)$(MAJOR)$(MINOR)
-	rm -f /usr/lib/$(SHAREDLIB)$(MAJOR)$(MINOR)$(FIX) 
+	rm -f /usr/lib/$(SHAREDLIB)$(MAJOR)$(MINOR)$(FIX)
 	rm -f /usr/lib/$(SHAREDLIB)$(MAJOR) /usr/lib/$(SHAREDLIB)
 	rm -f /usr/lib/$(STATICLIB)$(MAJOR)$(MINOR)
-	rm -f /usr/lib/$(STATICLIB)$(MAJOR)$(MINOR)$(FIX) 
+	rm -f /usr/lib/$(STATICLIB)$(MAJOR)$(MINOR)$(FIX)
 	rm -f /usr/lib/$(STATICLIB)$(MAJOR) /usr/lib/$(STATICLIB)

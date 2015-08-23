@@ -1,6 +1,6 @@
-/*Test the longest common prefix table in the suffix array 
+/*Test the longest common prefix table in the suffix array
  * implementation
- * 
+ *
  *   Copyright (C) 2015  Josh Marshall
  *
  * This program is free software: you can redistribute it and/or modify
@@ -24,32 +24,38 @@
 
 #include "../suffixarray.h"
 
+
+void printErrorCase(char *original, char **expected, int length, EnhancedSuffixArray toTest){
+  printf("invalid!\n");
+  printf("Expected ");
+  for(int k = 0; k < length; k++) printf("%s", expected[2+k]);
+  printf("\nRecieved ");
+  for(int k = 0; k < length; k++){
+    printf("%lu", toTest.LCPArray[k]);
+    fflush(stdout);
+  }
+  printf("\n");
+
+  printSuffixArrayContainer(toTest);
+}
+
+
 int main(int argc, char** argv){
-  
+
   char *original = argv[1];
-  
+  int length = strlen(original);
+
   printf("Constructing suffix array...\n"); fflush(stdout);
-  
+
   EnhancedSuffixArray toTest = makeEnhancedSuffixArray(makeSuffixArray((unsigned char*) original, strlen(original)));
-  
+
   printf("LCP array construction is "); fflush(stdout);
-  
-  for(int i = 0; i < strlen(original); i++){
+
+  for(int i = 0; i < length; i++){
     if(toTest.LCPArray[i] != atoi(argv[i+2])){
-      printf("invalid!\n");
-      printf("Expected ");
-      for(int k = 0; k < strlen(original); k++){
-        printf("%s", argv[k+2]);
-      }
-      printf("\nRecieved ");
-      for(int k = 0; k < strlen(original); k++){
-        printf("%lu", toTest.LCPArray[k]);
-        fflush(stdout);
-      }
-      printf("\n");
-      
-      printSuffixArrayContainer(toTest);
-      
+
+      printErrorCase(original, argv, length, toTest);
+
       freeEnhancedSuffixArray(&toTest);
       return 1;
     }

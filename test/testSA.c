@@ -1,6 +1,6 @@
-/*Test the Burrow-Wheeler Transformation table in the suffix array 
+/*Test the Burrow-Wheeler Transformation table in the suffix array
  * implementation
- * 
+ *
  *   Copyright (C) 2015  Josh Marshall
  *
  * This program is free software: you can redistribute it and/or modify
@@ -22,36 +22,39 @@
 #include <string.h>
 #include "../suffixarray.h"
 
+void printErrorCase(char *original, char *expected, SuffixArray toTest, int length){
+  printf("invalid!\n");
+  printf("Expected %s\n", expected);
+  printf("Recieved ");
+  for(int k = 0; k < length; k++){
+    printf("%c", original[(toTest.sa_data[k] + length -1)%length]);
+    fflush(stdout);
+  }
+
+  printf("\n");
+  for(int k = 0; k < length; k++)
+    printf("%lu, ", toTest.sa_data[k]);
+
+  printf("\n");
+
+}
+
 int main(int argc, char** argv){
-  
+
   char *original = argv[1];
   char *expected = argv[2];
   size_t length = strlen(original);
-  
+
   printf("Constructing suffix array...\n"); fflush(stdout);
-  
+
   SuffixArray toTest = makeSuffixArray((unsigned char*) original, length);
-  
+
   printf("BWT array construction is "); fflush(stdout);
-      
-  
+
   for(size_t i = 0; i < length; i++){
     if(original[(toTest.sa_data[i] + length -1)%length] != expected[i]){
-      printf("invalid!\n");
-      printf("Expected %s\n", expected);
-      printf("Recieved ");
-      for(int k = 0; k < length; k++){
-        printf("%c", original[(toTest.sa_data[k] + length -1)%length]);
-        fflush(stdout);
-      }
-      
-      printf("\n");
-      for(int k = 0; k < length; k++)
-        printf("%lu, ", toTest.sa_data[k]);
-      
-      printf("\n");
+      printErrorCase(original, expected, toTest, length);
       freeSuffixArray(&toTest);
-      
       return 1;
     }
   }
