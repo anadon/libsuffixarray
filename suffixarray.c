@@ -159,7 +159,7 @@ size_t *sais(const unsigned char *source, const size_t length, size_t *data){
   //LMS type right-to-left scan -- Add LMS entries to the ends of
   //various buckets going from right to left.  The result is partially
   //full buckets with LMS entries in acending order.
-  for(size_t i = 0; i < length; i++){
+  for(size_t i = length-1; i != ((size_t)0)-1; i--){
     if(LMSandLS[i] == 3){
       unsigned char target = source[i];
       bucket[target][(bucketSize[target] - bucketEndCounter[target]) - 1] = i;
