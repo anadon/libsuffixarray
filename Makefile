@@ -31,7 +31,7 @@ CFLAGS = -pipe -march=native -lpthread -fpic -D $(BUILD_CONFIG)
 
 STATIC_LINK = ar rcsu
 STATIC_LINK_DEBUG = $(STATIC_LINK)
-SHARED_LINK_COMMON = -shared -Wall -lc -march=native
+SHARED_LINK_COMMON = -shared -Wall -lc -lpthread -march=native
 SHARED_LINK = $(SHARED_LINK_COMMON) -O2
 SHARED_LINK_DEBUG = $(SHARED_LINK_COMMON) -g
 

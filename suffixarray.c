@@ -51,7 +51,7 @@ void printBucket(size_t *bucket[256], size_t bucketSize[256]){
   for(int i = 0; i < 256; i++){
     if(bucketSize[i] == 0) continue;
     fprintf(stderr, "(");
-    for(int j = 0; j < bucketSize[i] - 1; j++){
+    for(size_t j = 0; j < bucketSize[i] - 1; j++){
       fprintf(stderr, "%lu, ", bucket[i][j]);
     }
     fprintf(stderr, "%lu), ", bucket[i][bucketSize[i]-1]);
@@ -105,7 +105,7 @@ size_t *sais(const unsigned char *source, const size_t length, size_t *data){
 
   //calculate bucket start and stops
   bucket[0] = data;
-  for(short i = 1; i < 255; i++)
+  for(short i = 1; i < 256; i++)
     bucket[i] = &bucket[i-1][bucketSize[i-1]];
 
 #ifdef DEBUG

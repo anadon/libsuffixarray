@@ -39,27 +39,19 @@ int main(int argc, char** argv){
 	fread(sequence, 1, length, fd);
 	fclose(fd);
 	
-	//now to set the stack limit.  4 Hours finding this one out maybe. uhg
-	struct rlimit rl;
-	getrlimit(RLIMIT_STACK, &rl);
-	rl.rlim_cur = ((size_t)1) << 35;
-	if(0 != setrlimit(RLIMIT_STACK, &rl)){
-		printf("failed to set stack size\n");
-		exit(1);
-	}
-	
   printf("Constructing suffix array...\n"); fflush(stdout);
   time(&start);
   SuffixArray toTest = makeSuffixArray((unsigned char*) sequence, length);
   time(&end);
   printf("complete in %.f seconds\n", difftime(end, start)); fflush(stdout);
-  printf("Constructing enhanced suffix array from suffix array...\n"); fflush(stdout);
-  time(&start);
-  EnhancedSuffixArray toTest2 = makeEnhancedSuffixArray(toTest);
-  time(&end);
-  printf("complete in %.f seconds\n", difftime(end, start)); fflush(stdout);
+  //printf("Constructing enhanced suffix array from suffix array...\n"); fflush(stdout);
+  //time(&start);
+  //EnhancedSuffixArray toTest2 = makeEnhancedSuffixArray(toTest);
+  //time(&end);
+  //printf("complete in %.f seconds\n", difftime(end, start)); fflush(stdout);
 	
-	freeEnhancedSuffixArray(&toTest2);
+	//freeEnhancedSuffixArray(&toTest2);
+	freeSuffixArray(&toTest);
 	free(sequence);
 	
   return 0;
