@@ -4,7 +4,8 @@
 testBWT
 testLCP
 testSA
-testTime
+debugTime
+fastTime
 huge.txt
 large.txt
 med.txt

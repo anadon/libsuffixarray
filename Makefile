@@ -18,20 +18,23 @@
 ##
 
 ##.major.minor.fix
+#MAJOR -> features removed or other breaking API change
+#MINOR -> API extension/addition
+#FIX   -> code correction
 #VERSION = .$MAJOR.$MINOR.$FIX
 
 MAJOR = .2
-MINOR = .0
+MINOR = .1
 FIX = .0
 
 BUILD_CONFIG = LIGHT
 
-CFLAGS_DEBUG = -g -Wall -fstack-protector-all -lpthread -fpic -D DEBUG -D $(BUILD_CONFIG) -O0
-CFLAGS = -pipe -march=native -lpthread -fpic -D $(BUILD_CONFIG)
+CFLAGS_DEBUG = -g -Wall -fstack-protector-all -fpic -D DEBUG -D $(BUILD_CONFIG) -O0
+CFLAGS = -pipe -march=native -fpic -D $(BUILD_CONFIG)
 
 STATIC_LINK = ar rcsu
 STATIC_LINK_DEBUG = $(STATIC_LINK)
-SHARED_LINK_COMMON = -shared -Wall -lc -lpthread -march=native
+SHARED_LINK_COMMON = -shared -Wall -lc -march=native
 SHARED_LINK = $(SHARED_LINK_COMMON) -O2
 SHARED_LINK_DEBUG = $(SHARED_LINK_COMMON) -g
 
