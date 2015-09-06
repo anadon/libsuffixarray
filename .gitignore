@@ -12,3 +12,5 @@ med.txt
 small.txt
 .git.bfg-report/
 chr22.dna
+libsuffixarray.so
+libsuffixarray.a
