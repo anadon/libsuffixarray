@@ -19,7 +19,7 @@
 #
 
 
-CFLAGS = -g -Wall -fstack-protector-all ../libsuffixarray-debug.a -D DEBUG -O0
+CFLAGS = -g -Wall -fstack-protector-all libsuffixarray-debug.a -D DEBUG -O0
 
 SOURCE = testSA.c testLCP.c testTime.c
 
@@ -29,11 +29,11 @@ EXEC = testSA testLCP debugTime fastTime
 ##STANDARD BUILD########################################################
 
 ##all : $(EXEC) $(SOURCE)
-all : ../libsuffixarray.a
+all : libsuffixarray.a
 	gcc testSA.c $(CFLAGS) -o testSA
 	gcc testLCP.c $(CFLAGS) -o testLCP
 	gcc testTime.c $(CFLAGS) -o debugTime
-	gcc testTime.c ../libsuffixarray.a -O3 -march=native -o fastTime
+	gcc testTime.c libsuffixarray.a -O3 -march=native -o fastTime
 
 ##$(EXEC) : $(SOURCE)
 ##	gcc $< $(CFLAGS) -o $@
@@ -41,11 +41,10 @@ all : ../libsuffixarray.a
 ##AUXILLARY FUNCTIONS###################################################
 
 clean :
-	rm -f $(EXEC)
+	rm -f $(EXEC) *.a *.o *.so
 
 cleanAll :
 	cd ../ ; make clean
 
 deps :
-	cd ../ ; make debug ; make all
-	make all
+	cd ../ ; make debug

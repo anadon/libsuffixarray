@@ -70,16 +70,14 @@ $(OBJECTS) : $(SOURCE) $(HEADERS)
 
 ##DEBUG#################################################################
 
-debug : $(STATICLIB_DEBUG) $(SHAREDLIB_DEBUG) $(STATICLIB)
+debug : $(STATICLIB_DEBUG) $(STATICLIB)
+	mv $(STATICLIB_DEBUG) test/
+	mv $(STATICLIB) test/
 	cd test; make
 
 
 $(STATICLIB_DEBUG) : $(OBJECTS_DEBUG)
 	$(STATIC_LINK_DEBUG) $(STATICLIB_DEBUG) $(OBJECTS_DEBUG)
-
-
-$(SHAREDLIB_DEBUG) : $(OBJECT_DEBUG)
-	gcc $(OBJECTS_DEBUG) $(SHARED_LINK_DEBUG) -o $(SHAREDLIB_DEBUG)
 
 
 $(OBJECTS_DEBUG) : $(SOURCE) $(HEADERS)
