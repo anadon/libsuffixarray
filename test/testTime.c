@@ -21,15 +21,14 @@
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
-#include <sys/mman.h>
 #include <stdlib.h>
-#include <sys/resource.h>
+#include <sys/time.h>
 
-#include "../suffixarray.h"
+#include "suffixarray.h"
+
 
 int main(int argc, char** argv){
   
-	time_t start, end;
 	FILE *fd = fopen(argv[1], "r");
 	fseek(fd, 0, SEEK_END);
 	size_t length = ftell(fd);
@@ -39,18 +38,8 @@ int main(int argc, char** argv){
 	fread(sequence, 1, length, fd);
 	fclose(fd);
 	
-  printf("Constructing suffix array...\n"); fflush(stdout);
-  time(&start);
   SuffixArray toTest = makeSuffixArray((unsigned char*) sequence, length);
-  time(&end);
-  printf("complete in %.f seconds\n", difftime(end, start)); fflush(stdout);
-  //printf("Constructing enhanced suffix array from suffix array...\n"); fflush(stdout);
-  //time(&start);
-  //EnhancedSuffixArray toTest2 = makeEnhancedSuffixArray(toTest);
-  //time(&end);
-  //printf("complete in %.f seconds\n", difftime(end, start)); fflush(stdout);
 	
-	//freeEnhancedSuffixArray(&toTest2);
 	freeSuffixArray(&toTest);
 	free(sequence);
 	
