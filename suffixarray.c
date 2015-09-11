@@ -84,15 +84,18 @@ void printLMSandLS(unsigned char* LMSandLS, size_t length){
  * accuracy of this function is not rigerously verified, although it may
  * still be usable for string operations.
  **********************************************************************/
-size_t *sais(const unsigned char *source, const size_t length, size_t *data){
+size_t *sais(const unsigned char *source, const size_t length){
   //DECLARATIONS////////////////////////////////////////////////////////
   size_t *bucket[256];
   size_t bucketSize[256];
   size_t bucketFrontCounter[256];
   size_t bucketEndCounter[256];
+	size_t bucketSkipCounter[256];
+	
   unsigned char *LMSandLS;
 
   //INITIALIZATION//////////////////////////////////////////////////////
+	size_t *data = malloc(sizeof(size_t) * length);
   LMSandLS = malloc(sizeof(unsigned char) * length);
 
   /*prescan for buckets************************************************/
@@ -100,6 +103,7 @@ size_t *sais(const unsigned char *source, const size_t length, size_t *data){
   memset(bucketSize, 0, sizeof(size_t)* 256);
   memset(bucketFrontCounter, 0, sizeof(size_t)* 256);
   memset(bucketEndCounter, 0, sizeof(size_t)* 256);
+  memset(bucketSkipCounter, 0, sizeof(size_t)* 256);
   for(size_t i = 0; i < length; i++)
     bucketSize[source[i]]++;
 
@@ -185,6 +189,7 @@ size_t *sais(const unsigned char *source, const size_t length, size_t *data){
       if(LMSandLS[target] == 1){
         bucket[source[target]][bucketFrontCounter[source[target]]] = target;
         bucketFrontCounter[source[target]]++;
+				bucketSkipCounter[source[target+1]]++;
 #ifdef DEBUG
         printBucket(bucket, bucketSize);
 #endif
@@ -197,6 +202,7 @@ size_t *sais(const unsigned char *source, const size_t length, size_t *data){
       if(LMSandLS[target] == 1){
         bucket[source[target]][bucketFrontCounter[source[target]]] = target;
         bucketFrontCounter[source[target]]++;
+				bucketSkipCounter[source[target+1]]++;
 #ifdef DEBUG
         printBucket(bucket, bucketSize);
 #endif
@@ -253,8 +259,9 @@ size_t *sais(const unsigned char *source, const size_t length, size_t *data){
   //S type right to left scan.  Still difficult to follow reasoning, but
   //it seems to work.
   for(int i = 255; i >= 0; i--){
-    if(!bucketSize[i]) continue;
-    for(size_t j = bucketSize[i] - 1; j != ((size_t)0)-1; j--){
+		if(!bucketSize[i]) continue;
+		const size_t loopUntil = bucketSkipCounter[i] - 1;
+    for(size_t j = bucketSize[i] - 1; j != loopUntil; j--){
       size_t target = bucket[i][j]-1;
       if(target == ((size_t)0)-1) continue;
 
@@ -320,8 +327,7 @@ SuffixArray makeSuffixArray(const unsigned char* inputSequence,
 #endif
 
   SuffixArray toReturn = {inputSequence, false, inputLength,
-                                        sais(inputSequence, inputLength,
-                                malloc(sizeof(size_t) * inputLength))};
+																			sais(inputSequence, inputLength)};
 
 #ifdef DEBUG
   fprintf(stderr, "Finished initializing BWTArray\n"); fflush(stdout);
