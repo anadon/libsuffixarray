@@ -165,7 +165,7 @@ size_t *sais(const unsigned char *source, const size_t length){
   //full buckets with LMS entries in acending order.
   for(size_t i = length-1; i != ((size_t)0)-1; i--){
     if(LMSandLS[i] == 3){
-      unsigned char target = source[i];
+      const unsigned char target = source[i];
       bucket[target][(bucketSize[target] - bucketEndCounter[target]) - 1] = i;
       bucketEndCounter[target]++;
 #ifdef DEBUG
@@ -183,8 +183,8 @@ size_t *sais(const unsigned char *source, const size_t length){
   bucketFrontCounter[source[length-1]]++;
   for(int i = 0; i < 256; i++){
     for(size_t j = 0; j < bucketFrontCounter[i]; j++){
-      size_t target = bucket[i][j]-1;
-      if(target == ((size_t)0)-1) continue;
+      if(!bucket[i][j]) continue;
+      const size_t target = bucket[i][j]-1;
 
       if(LMSandLS[target] == 1){
         bucket[source[target]][bucketFrontCounter[source[target]]] = target;
@@ -196,8 +196,8 @@ size_t *sais(const unsigned char *source, const size_t length){
       }
     }
     for(size_t j = bucketSize[i] - bucketEndCounter[i]; j < bucketSize[i]; j++){
-      size_t target = bucket[i][j]-1;
-      if(target == ((size_t)0)-1) continue;
+      if(!bucket[i][j]) continue;
+      const size_t target = bucket[i][j]-1;
 
       if(LMSandLS[target] == 1){
         bucket[source[target]][bucketFrontCounter[source[target]]] = target;
@@ -209,6 +209,8 @@ size_t *sais(const unsigned char *source, const size_t length){
       }
     }
   }
+	for(short i = 0; i < 256; i++)
+		if(bucketSkipCounter[i]) bucketSkipCounter[i]--;
 
   //step 3 of setting up SA
   //S type right to left scan.  Still difficult to follow reasoning.
@@ -220,26 +222,25 @@ size_t *sais(const unsigned char *source, const size_t length){
   for(int i = 255; i >= 0; i--){
     if(bucketSize[i] == 0) continue;
     for(size_t j = bucketSize[i] - 1; j >= bucketSize[i] - bucketEndCounter[i] && j != ((size_t)0)-1; j--){
-      size_t target = bucket[i][j]-1;
-      if(target != ((size_t)0)-1){
+			if(!bucket[i][j]) continue;
+      const size_t target = bucket[i][j]-1;
 
-        if(LMSandLS[target] == 2){
-          unsigned char target2 = source[target];
-          bucket[target2][bucketSize[target2] - (bucketEndCounter[target2]+1)] = target;
-          bucketEndCounter[target2]++;
+			if(LMSandLS[target] == 2){
+        unsigned char target2 = source[target];
+        bucket[target2][bucketSize[target2] - (bucketEndCounter[target2]+1)] = target;
+        bucketEndCounter[target2]++;
 #ifdef DEBUG
-          printBucket(bucket, bucketSize);
+        printBucket(bucket, bucketSize);
 #endif
-        }
       }
     }
 
     for(size_t j = bucketFrontCounter[i] - 1; j != ((size_t)0)-1; j--){
-      size_t target = bucket[i][j]-1;
-      if(target == ((size_t)0)-1) continue;
+      if(!bucket[i][j]) continue;
+      const size_t target = bucket[i][j]-1;
 
       if(LMSandLS[target] == 2){
-        unsigned char target2 = source[target];
+        const unsigned char target2 = source[target];
         bucket[target2][bucketSize[target2] - (bucketEndCounter[target2]+1)] = target;
         bucketEndCounter[target2]++;
 #ifdef DEBUG
@@ -261,12 +262,13 @@ size_t *sais(const unsigned char *source, const size_t length){
   for(int i = 255; i >= 0; i--){
 		if(!bucketSize[i]) continue;
 		const size_t loopUntil = bucketSkipCounter[i] - 1;
+		//const size_t loopUntil = ((size_t)0) - 1;
     for(size_t j = bucketSize[i] - 1; j != loopUntil; j--){
-      size_t target = bucket[i][j]-1;
-      if(target == ((size_t)0)-1) continue;
+      if(!bucket[i][j]) continue;
+      const size_t target = bucket[i][j]-1;
 
       if(LMSandLS[target] != 1){
-        unsigned char target2 = source[target];
+        const unsigned char target2 = source[target];
         bucket[target2][(bucketSize[target2] - bucketEndCounter[target2]) - 1] = target;
         bucketEndCounter[target2]++;
 #ifdef DEBUG

@@ -25,7 +25,7 @@
 
 MAJOR = .2
 MINOR = .1
-FIX = .0
+FIX = .1
 
 BUILD_CONFIG = LIGHT
 
