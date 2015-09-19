@@ -32,7 +32,8 @@ EXEC = testSA testLCP debugTime fastTime
 all : libsuffixarray.a
 	gcc testSA.c $(CFLAGS) -o testSA
 	gcc testLCP.c $(CFLAGS) -o testLCP
-	gcc testTime.c $(CFLAGS) -o debugTime
+	gcc testTime.c -g -Wall -fstack-protector-all libsuffixarray.a -o lightTimeDebug
+	gcc testTime.c $(CFLAGS) -o heavyTimeDebug
 	gcc testTime.c libsuffixarray.a -O3 -march=native -o fastTime
 
 ##$(EXEC) : $(SOURCE)

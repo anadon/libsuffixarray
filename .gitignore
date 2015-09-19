@@ -6,6 +6,8 @@ testLCP
 testSA
 debugTime
 fastTime
+lightTimeDebug
+heavyTimeDebug
 huge.txt
 large.txt
 med.txt

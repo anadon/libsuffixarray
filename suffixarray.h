@@ -20,6 +20,7 @@
 #ifndef SUFFIX_ARRAY_H
 #define SUFFIX_ARRAY_H
 
+#include <stdlib.h>
 #ifndef __cplusplus
 #include <stdbool.h>
 #endif

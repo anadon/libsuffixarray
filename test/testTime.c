@@ -29,19 +29,19 @@
 
 int main(int argc, char** argv){
   
-	FILE *fd = fopen(argv[1], "r");
-	fseek(fd, 0, SEEK_END);
-	size_t length = ftell(fd);
-	rewind(fd);
+  FILE *fd = fopen(argv[1], "r");
+  fseek(fd, 0, SEEK_END);
+  size_t length = ftell(fd);
+  rewind(fd);
 	
-	void *sequence = malloc(length);
-	fread(sequence, 1, length, fd);
-	fclose(fd);
+  void *sequence = malloc(length);
+  fread(sequence, 1, length, fd);
+  fclose(fd);
 	
   SuffixArray toTest = makeSuffixArray((unsigned char*) sequence, length);
 	
-	freeSuffixArray(&toTest);
-	free(sequence);
+  freeSuffixArray(&toTest);
+  free(sequence);
 	
   return 0;
 }

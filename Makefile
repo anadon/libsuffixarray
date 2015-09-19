@@ -27,7 +27,7 @@ MAJOR = .2
 MINOR = .1
 FIX = .1
 
-CFLAGS_DEBUG = -g -pipe -Wall -fstack-protector-all -fpic -D DEBUG -O0
+CFLAGS_DEBUG = -ggdb -pipe -Wall -fstack-protector-all -fpic -D DEBUG -O0
 CFLAGS = -pipe -march=native -fpic -Ofast
 
 STATIC_LINK = ar rcs
