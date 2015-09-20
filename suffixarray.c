@@ -60,6 +60,7 @@ void printBucket(size_t *bucket[256], size_t bucketSize[256]){
   fflush(stdout);
 }
 
+
 void printLMSandLS(unsigned char* LMSandLS, size_t length){
   fprintf(stderr, "{");
   for(size_t i = 0; i < length - 2; i++){
@@ -295,18 +296,28 @@ size_t* AppendIdentInit(const unsigned char *source, const size_t length, const 
   fprintf(stderr, "Starting Prepend Identity metadata\n"); fflush(stdout);
 #endif
 
-  size_t *appendIdent = (size_t*) malloc(sizeof(size_t) * length);
+  size_t *appendIdent = malloc(sizeof(size_t) * length);
+  size_t *runningLPT = malloc(sizeof(size_t) * length);
 
+	memset(runningLPT, 0, sizeof(size_t) * length);
   appendIdent[0] = 0; //can't have and first characters in common with
                         //nothing
   for(size_t i = 1; i < length; i++){
-    size_t maxIndex = max((sArray[i-1]+1) % length, (sArray[i]+1) % length);
-    for(appendIdent[i] = 0; appendIdent[i] + maxIndex < length;
-                                                      appendIdent[i]++){
-      if(source[(sArray[i-1] + appendIdent[i] + 1) % length] !=
-                      source[(sArray[i] + appendIdent[i] + 1) % length])
-        break;
-    }
+		if(!runningLPT[sArray[i]]){
+      size_t maxIndex = length + max(sArray[i-1], sArray[i]);
+      for(appendIdent[i] = 0; appendIdent[i] < maxIndex; appendIdent[i]++){
+        if(source[sArray[i-1] + appendIdent[i]] !=
+                      source[sArray[i] + appendIdent[i]])
+          break;
+      }
+			
+			runningLPT[i] = appendIdent[i];
+			for(size_t j = sArray[i]+1; j < length && runningLPT[j-1] > 1; j++){
+				runningLPT[j] = runningLPT[j-1];
+			}
+	  }else{
+			appendIdent[i] = runningLPT[sArray[i]];
+		}
   }
 #ifdef DEBUG
   fprintf(stderr, "Finished Prepend Identity metadata\n"); fflush(stdout);
