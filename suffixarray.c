@@ -91,7 +91,6 @@ size_t *sais(const unsigned char *source, const size_t length){
   size_t bucketSize[256];
   size_t bucketFrontCounter[256];
   size_t bucketEndCounter[256];
-  size_t bucketSkipCounter[256];
   
   unsigned char *LMSandLS;
 
@@ -109,7 +108,6 @@ size_t *sais(const unsigned char *source, const size_t length){
   memset(bucketSize, 0, sizeof(size_t)* 256);
   memset(bucketFrontCounter, 0, sizeof(size_t)* 256);
   memset(bucketEndCounter, 0, sizeof(size_t)* 256);
-  memset(bucketSkipCounter, 0, sizeof(size_t)* 256);
   for(size_t i = 0; i < length; i++)
     bucketSize[source[i]]++;
 
@@ -196,7 +194,6 @@ size_t *sais(const unsigned char *source, const size_t length){
       if(LMSandLS[target] == 1){
         bucket[source[target]][bucketFrontCounter[source[target]]] = target;
         bucketFrontCounter[source[target]]++;
-				bucketSkipCounter[source[target]]++;
       }
     }
     for(size_t j = bucketSize[i] - bucketEndCounter[i]; j < bucketSize[i]; j++){
@@ -206,12 +203,9 @@ size_t *sais(const unsigned char *source, const size_t length){
       if(LMSandLS[target] == 1){
         bucket[source[target]][bucketFrontCounter[source[target]]] = target;
         bucketFrontCounter[source[target]]++;
-        bucketSkipCounter[source[target]]++;
       }
     }
   }
-  //for(short i = 0; i < 256; i++)
-  //  if(bucketSkipCounter[i]) bucketSkipCounter[i]--;
 
 #ifdef DEBUG
   printBucket(bucket, bucketSize);
@@ -264,7 +258,6 @@ size_t *sais(const unsigned char *source, const size_t length){
   //it seems to work.
   for(int i = 255; i >= 0; i--){
     if(!bucketSize[i]) continue;
-    //const size_t loopUntil = bucketSkipCounter[i] > 0 ? bucketSkipCounter[i]-2 : ((size_t)0)-1;
     const size_t loopUntil = ((size_t)0)-1;
     for(size_t j = bucketSize[i] - 1; j != loopUntil; j--){
       if(!bucket[i][j]) continue;
@@ -304,16 +297,16 @@ size_t* AppendIdentInit(const unsigned char *source, const size_t length, const 
                         //nothing
   for(size_t i = 1; i < length; i++){
 		if(!runningLPT[sArray[i]]){
-      size_t maxIndex = length + max(sArray[i-1], sArray[i]);
+      size_t maxIndex = length - max(sArray[i-1], sArray[i]);
       for(appendIdent[i] = 0; appendIdent[i] < maxIndex; appendIdent[i]++){
         if(source[sArray[i-1] + appendIdent[i]] !=
                       source[sArray[i] + appendIdent[i]])
           break;
       }
 			
-			runningLPT[i] = appendIdent[i];
+			runningLPT[sArray[i]] = appendIdent[i];
 			for(size_t j = sArray[i]+1; j < length && runningLPT[j-1] > 1; j++){
-				runningLPT[j] = runningLPT[j-1];
+				runningLPT[j] = runningLPT[j-1]-1;
 			}
 	  }else{
 			appendIdent[i] = runningLPT[sArray[i]];
@@ -402,8 +395,8 @@ void printSuffixArrayContainer(EnhancedSuffixArray toDump){
     fprintf(stderr, "%lu\t", i); fflush(stdout);
     fprintf(stderr, "%lu\t", toDump.sa_struct.sa_data[i]); fflush(stdout);
     fprintf(stderr, "%lu\t", toDump.LCPArray[i]); fflush(stdout);
-    fprintf(stderr, "%c\t", toDump.sa_struct.sequence[toDump.sa_struct.sa_data[i]]); fflush(stdout);
-    for(size_t j = (1 + toDump.sa_struct.sa_data[i]) % toDump.sa_struct.length; j < toDump.sa_struct.length; j++){
+    fprintf(stderr, "%c\t", toDump.sa_struct.sequence[(toDump.sa_struct.sa_data[i]] - 1 + toDump.sa_struct.length)%toDump.sa_struct.length); fflush(stdout);
+    for(size_t j = toDump.sa_struct.sa_data[i]; j < toDump.sa_struct.length; j++){
       fprintf(stderr, "%c", toDump.sa_struct.sequence[j]); fflush(stdout);
     }
     fprintf(stderr, "\n");  fflush(stdout);

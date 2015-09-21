@@ -36,6 +36,10 @@ void printErrorCase(char *original, char *expected, SuffixArray toTest, int leng
     printf("%lu, ", toTest.sa_data[k]);
 
   printf("\n");
+	
+	EnhancedSuffixArray tmp = makeEnhancedSuffixArray(toTest);
+	printSuffixArrayContainer(tmp);
+	freeEnhancedSuffixArray(tmp);	
 
 }
 
@@ -54,7 +58,6 @@ int main(int argc, char** argv){
   for(size_t i = 0; i < length; i++){
     if(original[(toTest.sa_data[i] + length -1)%length] != expected[i]){
       printErrorCase(original, expected, toTest, length);
-      freeSuffixArray(&toTest);
       return 1;
     }
   }
