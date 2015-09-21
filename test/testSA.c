@@ -39,7 +39,7 @@ void printErrorCase(char *original, char *expected, SuffixArray toTest, int leng
 	
 	EnhancedSuffixArray tmp = makeEnhancedSuffixArray(toTest);
 	printSuffixArrayContainer(tmp);
-	freeEnhancedSuffixArray(tmp);	
+	freeEnhancedSuffixArray(&tmp);	
 
 }
 

@@ -395,7 +395,7 @@ void printSuffixArrayContainer(EnhancedSuffixArray toDump){
     fprintf(stderr, "%lu\t", i); fflush(stdout);
     fprintf(stderr, "%lu\t", toDump.sa_struct.sa_data[i]); fflush(stdout);
     fprintf(stderr, "%lu\t", toDump.LCPArray[i]); fflush(stdout);
-    fprintf(stderr, "%c\t", toDump.sa_struct.sequence[(toDump.sa_struct.sa_data[i]] - 1 + toDump.sa_struct.length)%toDump.sa_struct.length); fflush(stdout);
+    fprintf(stderr, "%c\t", toDump.sa_struct.sequence[(toDump.sa_struct.sa_data[i] - 1 + toDump.sa_struct.length)%toDump.sa_struct.length]); fflush(stdout);
     for(size_t j = toDump.sa_struct.sa_data[i]; j < toDump.sa_struct.length; j++){
       fprintf(stderr, "%c", toDump.sa_struct.sequence[j]); fflush(stdout);
     }
