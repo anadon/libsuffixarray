@@ -18,8 +18,9 @@
 # along with this program.	If not, see <http://www.gnu.org/licenses/>.
 #
 
+INCLUDE_LIBS = libsuffixarray-debug.a qsufsort.a
 
-CFLAGS = -g -Wall -fstack-protector-all libsuffixarray-debug.a -D DEBUG -O0
+CFLAGS = -g -Wall -fstack-protector-all $(INCLUDE_LIBS) -D DEBUG -O0
 
 SOURCE = testSA.c testLCP.c testTime.c
 
@@ -29,7 +30,8 @@ EXEC = testSA testLCP debugTime fastTime
 ##STANDARD BUILD########################################################
 
 ##all : $(EXEC) $(SOURCE)
-all : libsuffixarray.a
+all :
+	cd qsufsort ; make ; cp qsufsort.h .. ; cp qsufsort.a ..
 	gcc testSA.c $(CFLAGS) -o testSA
 	gcc testLCP.c $(CFLAGS) -o testLCP
 	gcc testTime.c -g -Wall -fstack-protector-all libsuffixarray.a -o lightTimeDebug
@@ -42,7 +44,8 @@ all : libsuffixarray.a
 ##AUXILLARY FUNCTIONS###################################################
 
 clean :
-	rm -f $(EXEC) *.a *.o *.so
+	rm -f $(EXEC) *.a *.o *.so qsufsort.h
+	cd qsufsort ; make clean
 
 cleanAll :
 	cd ../ ; make clean

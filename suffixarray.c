@@ -84,6 +84,10 @@ void printLMSandLS(unsigned char* LMSandLS, size_t length){
  * a reverse burrow-wheeler transform is implemented in the tests, the
  * accuracy of this function is not rigerously verified, although it may
  * still be usable for string operations.
+ * 
+ * TODO: consider adding code to reverse the order of all the last
+ * suffixes with the same starting symbol -- this may lead to more
+ * well behaved ordering.
  **********************************************************************/
 size_t *sais(const unsigned char *source, const size_t length){
   //DECLARATIONS////////////////////////////////////////////////////////
@@ -184,8 +188,9 @@ size_t *sais(const unsigned char *source, const size_t length){
   //please refer to the paper.  Bounds checking was used in place of
   //checking for negative values so that -1 didn't have to be used,
   //allowing architentually maximal string length.
-  bucket[source[length-1]][bucketFrontCounter[source[length-1]]] = length-1;
-  bucketFrontCounter[source[length-1]]++;
+	const unsigned char bucketLocation = source[length-1];
+  bucket[bucketLocation][0] = length-1;
+  bucketFrontCounter[bucketLocation]++;
   for(int i = 0; i < 256; i++){
     for(size_t j = 0; j < bucketFrontCounter[i]; j++){
       if(!bucket[i][j]) continue;
@@ -290,13 +295,13 @@ size_t* AppendIdentInit(const unsigned char *source, const size_t length, const 
 #endif
 
   size_t *appendIdent = malloc(sizeof(size_t) * length);
-  size_t *runningLPT = malloc(sizeof(size_t) * length);
+  //~ size_t *runningLPT = malloc(sizeof(size_t) * length);
 
-	memset(runningLPT, 0, sizeof(size_t) * length);
+	//~ memset(runningLPT, 0, sizeof(size_t) * length);
   appendIdent[0] = 0; //can't have and first characters in common with
-                        //nothing
+											//nothing
   for(size_t i = 1; i < length; i++){
-		if(!runningLPT[sArray[i]]){
+		//~ if(!runningLPT[sArray[i]]){
       size_t maxIndex = length - max(sArray[i-1], sArray[i]);
       for(appendIdent[i] = 0; appendIdent[i] < maxIndex; appendIdent[i]++){
         if(source[sArray[i-1] + appendIdent[i]] !=
@@ -304,13 +309,13 @@ size_t* AppendIdentInit(const unsigned char *source, const size_t length, const 
           break;
       }
 			
-			runningLPT[sArray[i]] = appendIdent[i];
-			for(size_t j = sArray[i]+1; j < length && runningLPT[j-1] > 1; j++){
-				runningLPT[j] = runningLPT[j-1]-1;
-			}
-	  }else{
-			appendIdent[i] = runningLPT[sArray[i]];
-		}
+			//~ runningLPT[sArray[i]] = appendIdent[i];
+			//~ for(size_t j = sArray[i]+1; j < length && runningLPT[j-1] > 1; j++){
+				//~ runningLPT[j] = runningLPT[j-1]-1;
+			//~ }
+	  //~ }else{
+			//~ appendIdent[i] = runningLPT[sArray[i]];
+		//~ }
   }
 #ifdef DEBUG
   fprintf(stderr, "Finished Prepend Identity metadata\n"); fflush(stdout);

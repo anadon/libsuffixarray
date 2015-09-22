@@ -20,7 +20,14 @@
 
 #include <stdio.h>
 #include <string.h>
-#include "../suffixarray.h"
+#ifndef BOOLEAN
+#define BOOLEAN
+#include <stdbool.h>
+#endif
+
+#include "suffixarray.h"
+#include "qsufsort.h"
+
 
 void printErrorCase(char *original, char *expected, SuffixArray toTest, int length){
   printf("invalid!\n");
@@ -48,20 +55,40 @@ int main(int argc, char** argv){
   char *original = argv[1];
   char *expected = argv[2];
   size_t length = strlen(original);
+	int *qInput = malloc(sizeof(int) * length);
+	int *qOutput = malloc(sizeof(int) * length);
+	bool wasAnError = false;
 
   printf("Constructing suffix array...\n"); fflush(stdout);
 
   SuffixArray toTest = makeSuffixArray((unsigned char*) original, length);
+	
+	for(ssize_t i = 0; i < length; i++)
+		qInput[i] = argv[1][i];
+	
+	suffixsort(qInput, qOutput, length, 256, 0); 
 
   printf("BWT array construction is "); fflush(stdout);
 
   for(size_t i = 0; i < length; i++){
     if(original[(toTest.sa_data[i] + length -1)%length] != expected[i]){
-      printErrorCase(original, expected, toTest, length);
-      return 1;
+			wasAnError = true;
+			printf("Suffix Array has unexpected value at index %lu\n", i);
     }
+		int left = qOutput[i+1];
+		int right = toTest.sa_data[i];
+		if(left != right){
+			wasAnError = true;
+			printf("Suffix Array implementations disagree on index %lu\t", i);
+			printf("%lu vs %d\n", toTest.sa_data[i] , qOutput[i+1]);
+		}
   }
-  printf("valid!\n");
+	
+	if(wasAnError){
+      printErrorCase(original, expected, toTest, length);
+			return 1;
+	}
   freeSuffixArray(&toTest);
+  printf("valid!\n");
   return 0;
 }
