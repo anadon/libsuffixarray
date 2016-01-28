@@ -52,3 +52,4 @@ cleanAll :
 
 deps :
 	cd ../ ; make debug
+
