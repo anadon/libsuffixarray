@@ -71,18 +71,15 @@ int main(int argc, char** argv){
   printf("BWT array construction is "); fflush(stdout);
 
   for(size_t i = 0; i < length; i++){
-    if(original[(toTest.sa_data[i] + length -1)%length] != expected[i]){
-			wasAnError = true;
-			printf("Suffix Array has unexpected value at index %lu\n", i);
-    }
 		int left = qOutput[i+1];
 		int right = toTest.sa_data[i];
 		if(left != right){
 			wasAnError = true;
-			printf("Suffix Array implementations disagree on index %lu\t", i);
-			printf("%lu vs %d\n", toTest.sa_data[i] , qOutput[i+1]);
+			printf("\nSuffix Array implementations disagree on index %lu\t", i);
+			printf("%lu vs %d", toTest.sa_data[i] , qOutput[i+1]);
 		}
   }
+	printf("\n");
 	
 	if(wasAnError){
       printErrorCase(original, expected, toTest, length);
