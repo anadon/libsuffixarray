@@ -20,7 +20,6 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <assert.h>
-#include <pthread.h>
 #include <unistd.h>
 
 #include "suffixarray.h"
@@ -28,6 +27,20 @@
 #ifdef DEBUG
 #include <stdio.h>
 #endif
+
+////////////////////////////////////////////////////////////////////////
+//  DEFINES  ///////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////
+
+
+#define _L_ (0)
+#define _S_ (1)
+#define _M_ (2)
+
+#define u8  unsigned char
+#define s16 signed short
+
+#define DEREFERENCE_BREAK_EVEN (0.0)
 
 
 ////////////////////////////////////////////////////////////////////////
@@ -42,55 +55,143 @@
 
 
 ////////////////////////////////////////////////////////////////////////
-//  PRIVATE FUNCTIONS //////////////////////////////////////////////////
+//  PRIVATE STRUCTURES  ////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////
 
 
-#ifdef DEBUG
-void printBucket(size_t *bucket[256], size_t bucketSize[256]){
-  for(int i = 0; i < 256; i++){
-    if(bucketSize[i] == 0) continue;
-    fprintf(stderr, "(");
-    for(size_t j = 0; j < bucketSize[i] - 1; j++){
-      fprintf(stderr, "%lu, ", bucket[i][j]);
-    }
-    fprintf(stderr, "%lu), ", bucket[i][bucketSize[i]-1]);
-  }
-  fprintf(stderr, "\n");
-  fflush(stdout);
-}
-
-
-void printLMSandLS(unsigned char* LMSandLS, size_t length){
-  fprintf(stderr, "{");
-  for(size_t i = 0; i < length - 2; i++){
-    fprintf(stderr, "%c, ", LMSandLS[i] == 1 ? 'L' : (LMSandLS[i] == 2 ? 'S' : 'M'));
-  }
-  fprintf(stderr, "%c}\n", (LMSandLS[length-1] == 1 ? 'L' : 'S'));
-  fflush(stdout);
-}
-#endif
-
-
 /***********************************************************************
- * WARNING: this function may be incorrect.
- *
- * This function is used to determine the start indexes for a
- * Burrow-Wheeler Transformation when applied to the source array in a
- * suffixArray struct.  This should only be called once during the
- * structure's lifetime, by makeSuffixArray().  There are various very
- * small variations in output which may or may not be valid between
- * various incarnations of this algorithm's implementation here.  Until
- * a reverse burrow-wheeler transform is implemented in the tests, the
- * accuracy of this function is not rigerously verified, although it may
- * still be usable for string operations.
- * 
- * TODO: consider adding code to reverse the order of all the last
- * suffixes with the same starting symbol -- this may lead to more
- * well behaved ordering.
- **********************************************************************/
-size_t *sais(const unsigned char *source, const size_t length){
-  //DECLARATIONS////////////////////////////////////////////////////////
+This is to help make sequence operations more general and safer.
+***********************************************************************/
+typedef struct{
+  size_t startIndex, endIndex;
+}lSeqAbst, sSeqAbst, seqAbst; //Sequence Abstraction
+
+
+typedef struct{
+  size_t size;
+  lSeqAbst *bucket;
+}lBucket;
+
+typedef struct{
+  size_t size;
+  sSeqAbst *bucket;
+}sBucket;
+
+typedef struct{
+  size_t size;
+  lBucket *buckets;
+}lBuckets;
+
+typedef struct{
+  size_t size;
+  sBucket *buckets;
+}sBuckets;
+  
+//This is to aid in passing around sequence abstractions.
+typedef struct{
+  size_t size;
+  size_t *S;
+}sequence;
+
+
+////////////////////////////////////////////////////////////////////////
+//  PRIVATE SUFFIX ARRAY IMPLEMENTATIONS  //////////////////////////////
+////////////////////////////////////////////////////////////////////////
+
+/*Resursive Bucket Sort************************************************/
+/***********************************************************************
+* Recursive bucket sort is a simple algorithm with O(n^2) time and space
+* requirements.  It sorts each layer progresively from each first value 
+* of each suffix to the point the suffix is in it's own bucket.  This is
+* useful for small scale verification of correctness, but is too costly
+* to use in practice.
+* 
+* @bucket :contains a number of indicies from source to be sorted
+* @source :contains sequence from which the suffix array is being 
+*          constructed
+* @depth  :used to track the depth of the algorithm so suffixes can be 
+*          compared appropriately.  First call should always be 0.
+***********************************************************************/
+void recursiveBucketSort(size_t *bucket, const size_t bucketSize, 
+            const u8 *source, const size_t sourceLength, size_t depth){
+
+//DECLARATIONS//////////////////////////////////////////////////////////
+  size_t *count, *ptrTrackerUnmod, *ptrTrackerMod;
+  size_t i, *tmpBucket;
+  const size_t nextDepth = depth+1;
+  size_t overflowIndex;
+
+//MEMORY ALLOCATION BUG HACK////////////////////////////////////////////
+  do{
+    for(i = 1; i < bucketSize; i++){
+      if(bucket[i] + depth >= sourceLength) break;
+      if(source[bucket[0] + depth] != source[bucket[i] + depth]) break;
+    }
+    if(i == bucketSize) depth++;
+  }while(i == bucketSize);
+  
+
+//INITIALIZATIONS///////////////////////////////////////////////////////
+  overflowIndex = 0;
+  ptrTrackerUnmod = malloc(sizeof(size_t) * 256);
+  ptrTrackerMod   = malloc(sizeof(size_t) * 256);
+  count           = malloc(sizeof(size_t) * 256);
+  tmpBucket       = malloc(sizeof(size_t) * bucketSize);
+  
+  memset(count, 0, sizeof(size_t) * 256);
+  
+//OPERATIONS////////////////////////////////////////////////////////////
+  
+  ptrTrackerUnmod[0] = 0;
+  for(i = 0; i < bucketSize; i++){
+    if(bucket[i] + depth >= sourceLength){
+      ptrTrackerUnmod[0] = 1;
+      overflowIndex = i;
+      tmpBucket[0] = i;
+      break;
+    }
+  }
+  
+  for(i = 0; i < bucketSize; i++) 
+    if(ptrTrackerUnmod[0] == 0 || i != overflowIndex)
+      count[source[bucket[i] + depth]]++;
+  
+  for(i = 1; i < 256; i++) ptrTrackerUnmod[i] = ptrTrackerUnmod[i-1] + 
+                                                            count[i-1];
+  memcpy(ptrTrackerMod, ptrTrackerUnmod, sizeof(size_t) * 256);
+  
+  for(i = 0; i < bucketSize; i++)
+    if(ptrTrackerUnmod[0] == 0 || i != overflowIndex)
+      tmpBucket[ptrTrackerMod[source[bucket[i]+depth]]++] = bucket[i];
+  free(ptrTrackerMod); ptrTrackerMod = NULL;
+  
+  memcpy(bucket, tmpBucket, sizeof(size_t) * bucketSize);
+  free(tmpBucket); tmpBucket = NULL;
+  
+  
+  for(i = 0; i < 256; i++)
+    if(count[i] > 1)
+      recursiveBucketSort(&bucket[ptrTrackerUnmod[i]], count[i], source, 
+                                              sourceLength, nextDepth);
+  free(count);
+  free(ptrTrackerUnmod);
+  
+}
+
+
+
+/*Suffix Array Induced Sorting*****************************************/
+/***********************************************************************
+* Suffix Array Induced Sorting (SAIS) is a linear time/space suffix 
+* array construction algorithm which competes with BPR2 for top 
+* time/space requirements.  TODO: reference paper here.
+* 
+* @source :the sequence to construct the suffix array on.
+***********************************************************************/
+sequence SAIS(const u8 *source, const size_t sourceLength){
+  
+//DECLARATIONS//////////////////////////////////////////////////////////
+  sequence toReturn;
   size_t *bucket[256];
   size_t bucketSize[256];
   size_t bucketFrontCounter[256];
@@ -98,7 +199,7 @@ size_t *sais(const unsigned char *source, const size_t length){
   
   unsigned char *LMSandLS;
 
-  //INITIALIZATION//////////////////////////////////////////////////////
+////INITIALIZATION//////////////////////////////////////////////////////
   size_t *data = malloc(sizeof(size_t) * length);
   LMSandLS = malloc(sizeof(unsigned char) * length);
 
@@ -126,7 +227,8 @@ size_t *sais(const unsigned char *source, const size_t length){
   printBucket(bucket, bucketSize);
 #endif
 
-  //MAIN PROCESSING/////////////////////////////////////////////////////
+
+//OPERATION/////////////////////////////////////////////////////////////
   /*set up L, S, and LMS metadata**************************************/
   /*0 = undefined, 1 = L, 2 = S, 3 = LMS*/
   LMSandLS[length-1] = 1;
@@ -280,49 +382,204 @@ size_t *sais(const unsigned char *source, const size_t length){
   printBucket(bucket, bucketSize);
 #endif
 
-  //CLEANUP AND RETURN//////////////////////////////////////////////////
+//CLEAN UP//////////////////////////////////////////////////////////////
 
   free(LMSandLS);
-
-  return data;
+  
+  return toReturn;
 }
 
+////////////////////////////////////////////////////////////////////////
+//  PRIVATE INTERFACE FUNCTIONS  ///////////////////////////////////////
+////////////////////////////////////////////////////////////////////////
 
-size_t* AppendIdentInit(const unsigned char *source, const size_t length, const size_t *sArray){
 
 #ifdef DEBUG
-  fprintf(stderr, "Starting Prepend Identity metadata\n"); fflush(stdout);
-#endif
-
-  size_t *appendIdent = malloc(sizeof(size_t) * length);
-  //~ size_t *runningLPT = malloc(sizeof(size_t) * length);
-
-	//~ memset(runningLPT, 0, sizeof(size_t) * length);
-  appendIdent[0] = 0; //can't have and first characters in common with
-											//nothing
-  for(size_t i = 1; i < length; i++){
-		//~ if(!runningLPT[sArray[i]]){
-      size_t maxIndex = length - max(sArray[i-1], sArray[i]);
-      for(appendIdent[i] = 0; appendIdent[i] < maxIndex; appendIdent[i]++){
-        if(source[sArray[i-1] + appendIdent[i]] !=
-                      source[sArray[i] + appendIdent[i]])
-          break;
-      }
-			
-			//~ runningLPT[sArray[i]] = appendIdent[i];
-			//~ for(size_t j = sArray[i]+1; j < length && runningLPT[j-1] > 1; j++){
-				//~ runningLPT[j] = runningLPT[j-1]-1;
-			//~ }
-	  //~ }else{
-			//~ appendIdent[i] = runningLPT[sArray[i]];
-		//~ }
+void printBucket(size_t *bucket[256], size_t bucketSize[256]){
+  for(int i = 0; i < 256; i++){
+    if(bucketSize[i] == 0) continue;
+    fprintf(stderr, "(");
+    for(size_t j = 0; j < bucketSize[i] - 1; j++){
+      fprintf(stderr, "%lu, ", bucket[i][j]);
+    }
+    fprintf(stderr, "%lu), ", bucket[i][bucketSize[i]-1]);
   }
-#ifdef DEBUG
-  fprintf(stderr, "Finished Prepend Identity metadata\n"); fflush(stdout);
+  fprintf(stderr, "\n");
+  fflush(stdout);
+}
+
+void printArray(size_t *array, size_t size){
+  for(size_t i = 0; i < size; i++)
+    printf("%lu, \t", array[i]);
+  printf("\n");
+  fflush(stdout);
+}
+
+void printLMSandLS(u8* LMSandLS, size_t length){
+  fprintf(stderr, "{");
+  for(size_t i = 0; i < length - 2; i++){
+    fprintf(stderr, "%c, ", LMSandLS[i] == _L_ ? 'L' : (LMSandLS[i] == _S_ ? 'S' : 'M'));
+  }
+  fprintf(stderr, "%c}\n", (LMSandLS[length-1] == _L_ ? 'L' : 'S'));
+  fflush(stdout);
+}
 #endif
 
-  return appendIdent;
+
+
+sequence initSequence(size_t length){
+  sequence toReturn;
+  toReturn.size = length;
+  toReturn.S = malloc(sizeof(*toReturn.S) * toReturn.size);
+  
+#ifdef DEBUG
+  if(length == 0){
+    fprintf(stderr, "initSequnce: invalid length argument\n");
+    fflush(stderr);
+    exit(errno);
+  }
+  if(toReturn.S == NULL){
+    fprintf(stderr, "initSequnce: failed to allocate space to sequence\n");
+    fflush(stderr);
+    exit(errno);
+  }
+#endif
+  
+  return toReturn;
 }
+
+
+/***********************************************************************
+ * Create array of indexes from S which omit all except the last 
+ * repeated value.
+***********************************************************************/
+sequence removeRuns(const u8 *S, const size_t size){
+  sequence toReturn = initSequence(size);
+  toReturn.size = 0;
+  for(size_t i = 0; i < size-1; i++) if(S[i] != S[i+1])
+    toReturn.S[toReturn.size++] = i;
+  toReturn.S = realloc(toReturn.S, toReturn.size * sizeof(*toReturn.S));
+  return toReturn;
+}
+
+
+
+
+/***********************************************************************
+ * tweaked BPR2 to handle some changes nessicary for run removal
+***********************************************************************/
+sequence bpr2dereferenced(const u8 *source, const size_t length, const sequence input){
+
+  sequence toReturn = initSequence(input.size);
+  
+  memcpy(toReturn.S, input.S, toReturn.size * sizeof(*toReturn.S));
+  
+  recursiveBucketSort(toReturn.S, toReturn.size, source, length, 0);
+  
+  return toReturn;
+}
+
+
+/***********************************************************************
+ * original BPR2
+***********************************************************************/
+sequence bpr2direct(const u8 *source, const size_t length){
+
+  sequence toReturn = initSequence(length);
+  
+  for(size_t i = 0; i < length; i++) toReturn.S[i] = i;
+  
+  recursiveBucketSort(toReturn.S, toReturn.size, source, length, 0);
+  
+  return toReturn;
+}
+
+
+/***********************************************************************
+ * Re-add runs of elements into SSA
+***********************************************************************/
+sequence addRuns(const u8 *input, const size_t length, sequence SPrime, sequence proxy){
+
+//DECLARATIONS//////////////////////////////////////////////////////////
+  sequence toReturn;
+  size_t numToExpand;
+  
+//INITIALIZATIONS///////////////////////////////////////////////////////
+  toReturn = initSequence(length);
+  
+//OPERATIONS////////////////////////////////////////////////////////////
+  for(size_t i = 0; i < length; i++){
+    if(proxy.S[i] < SPrime.size-1 
+       && SPrime.S[proxy.S[i]] - SPrime.S[proxy.S[i]+1] > 1){
+      size_t j = i++;
+      while(proxy.S[j] < SPrime.size-1 
+            && SPrime.S[proxy.S[j]] - SPrime.S[proxy.S[j]+1] > 1 
+            && input[SPrime.S[proxy.S[j]]] == input[SPrime.S[proxy.S[i]]])
+                                                                       {
+        j++;
+      }
+      
+      numToExpand = j-i;
+      size_t *foundToRepeat;
+      //Here we flatten the 2D array and will just use a more complex
+      //accessing portion in order to avoid more calls to malloc.
+      foundToRepeat = malloc(sizeof(*foundToRepeat) * numToExpand * 3);
+      //NOTE: in parsing as entries become exausted, the pointers for
+      //reading and writing should be seperate so that in the course of 
+      //each expantion iteration old entries are removed in an efficient
+      //manner.
+      
+      //populate the entries to expand
+      for(size_t k = 0; k < numToExpand; k++){
+        
+      }
+      
+    }
+  }
+
+//CLEAN UP//////////////////////////////////////////////////////////////
+
+
+  return toReturn;
+}
+
+
+
+/***********************************************************************
+ * Switching to BPR2 over SAIS because SAIS became unruley and BPR2 
+ * seems to have better performance characteristics.  Still 
+ * investigating.
+***********************************************************************/
+size_t* getSortedSuffixArray(const u8 *input, const size_t length){
+  
+//DECLARATIONS//////////////////////////////////////////////////////////
+  sequence toReturn, intermediate, runsRem;
+  
+//INITIALIZATIONS///////////////////////////////////////////////////////
+  runsRem = removeRuns(input, length);
+
+//OPERATIONS////////////////////////////////////////////////////////////
+  
+  if((runsRem.size * 1.0) / length > DEREFERENCE_BREAK_EVEN){
+    free(runsRem.S);
+    toReturn = bpr2direct(input, length);
+  }else{
+    intermediate = bpr2dereferenced(input, length, runsRem);
+  
+    toReturn = addRuns(input, length, runsRem, intermediate);
+    free(runsRem.S);
+    free(intermediate.S);
+  }
+  
+//CLEAN UP//////////////////////////////////////////////////////////////
+  //free(intermediate.S);
+  
+  return toReturn.S;
+}
+
+
+
+
 
 
 ////////////////////////////////////////////////////////////////////////
@@ -330,18 +587,17 @@ size_t* AppendIdentInit(const unsigned char *source, const size_t length, const 
 ////////////////////////////////////////////////////////////////////////
 
 
-SuffixArray makeSuffixArray(const unsigned char* inputSequence,
+SuffixArray makeSuffixArray(const u8* inputSequence,
                                               const size_t inputLength){
 
+#ifdef DEBUG
   assert(inputLength > 0);
   assert(inputSequence != NULL);
-
-#ifdef DEBUG
   fprintf(stderr, "Initializing BWTArray\n"); fflush(stdout);
 #endif
 
   SuffixArray toReturn = {inputSequence, false, inputLength,
-																			sais(inputSequence, inputLength)};
+                      getSortedSuffixArray(inputSequence, inputLength)};
 
 #ifdef DEBUG
   fprintf(stderr, "Finished initializing BWTArray\n"); fflush(stdout);
@@ -357,9 +613,9 @@ EnhancedSuffixArray makeEnhancedSuffixArray(const SuffixArray toProcess){
   fprintf(stderr, "Initializing EnhancedSuffixArray\n"); fflush(stdout);
 #endif
 
-  EnhancedSuffixArray toReturn = {toProcess,
-        AppendIdentInit(toProcess.sequence, toProcess.length,
-                                                    toProcess.sa_data)};
+  EnhancedSuffixArray toReturn;// = {toProcess,
+  //      AppendIdentInit(toProcess.sequence, toProcess.length,
+  //                                                  toProcess.sa_data)};
 
 #ifdef DEBUG
   fprintf(stderr, "Finished initializing EnhancedSuffixArray\n"); fflush(stdout);
@@ -372,7 +628,7 @@ EnhancedSuffixArray makeEnhancedSuffixArray(const SuffixArray toProcess){
 SuffixArray copySequenceToLocal(const SuffixArray toMod){
   assert(false == toMod.doIOwnSequence);
 
-  unsigned char *tmp = malloc(sizeof(size_t) * toMod.length);
+  u8 *tmp = malloc(sizeof(size_t) * toMod.length);
   memcpy(tmp, toMod.sequence, sizeof(size_t) * toMod.length);
 
   SuffixArray toReturn = {tmp, true, toMod.length, toMod.sa_data};

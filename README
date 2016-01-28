@@ -10,10 +10,9 @@ any use of suffix trees.  For more details, see USAGE.
 NOTE
 ========================================================================
 
-The implementation is currently known to be incorrect.  Work is being
-done to ensure testing is more rigerous while the code is reviewed.
-This notice will remain for so long as the implementation is known to be
-flawed.
+The implementation is now correct, but slow.  While hack on the SAIS code
+the library will rely on the rather simple recursive bucket sort.  The
+sort is prone to stack overflows on genomic size data.
 
 ========================================================================
 BUILD AND INSTALL=======================================================
