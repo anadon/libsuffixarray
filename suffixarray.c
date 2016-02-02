@@ -33,9 +33,9 @@
 ////////////////////////////////////////////////////////////////////////
 
 
-#define _L_ (0)
-#define _S_ (1)
-#define _M_ (2)
+#define _L_ (1)
+#define _S_ (2)
+#define _LMS_ (3)
 
 #define u8  unsigned char
 #define s16 signed short
@@ -186,9 +186,21 @@ void recursiveBucketSort(size_t *bucket, const size_t bucketSize,
 * array construction algorithm which competes with BPR2 for top 
 * time/space requirements.  TODO: reference paper here.
 * 
-* @source :the sequence to construct the suffix array on.
+* Currently this code is being changes to enable testing of run-removal
+* on the code.  Run removal enforces stricter conditions on the input 
+* sequence which allows for some of the logic to be simplified.  This
+* experimental approach is particularly useful for inputs with small
+* alphabets in the general case, but definitionally saves on sequences 
+* which are known to have many runs of identical values in the sequence.
+* 
+* @source  :The sequence to construct the suffix array on.
+* @runsRem :
+* 
+* 
+* Notes
+* 0 = undefined, 1 = L, 2 = S, 3 = {LMS, M}
 ***********************************************************************/
-sequence SAIS(const u8 *source, const size_t sourceLength){
+sequence SAIS(const u8 *source, const size_t sourceLength, const sequence runsRem){
   
 //DECLARATIONS//////////////////////////////////////////////////////////
   sequence toReturn;
@@ -196,25 +208,21 @@ sequence SAIS(const u8 *source, const size_t sourceLength){
   size_t bucketSize[256];
   size_t bucketFrontCounter[256];
   size_t bucketEndCounter[256];
+  size_t i;
   
   unsigned char *LMSandLS;
 
 ////INITIALIZATION//////////////////////////////////////////////////////
-  size_t *data = malloc(sizeof(size_t) * length);
-  LMSandLS = malloc(sizeof(unsigned char) * length);
-
-#ifdef DEBUG
-  if(!data) exit(-1);
-  if(!LMSandLS) exit(-1);
-#endif
+  size_t *data = malloc(sizeof(size_t) * runsRem.size);
+  LMSandLS = malloc(sizeof(unsigned char) * runsRem.size);
 
   /*prescan for buckets************************************************/
   //calculate bucket sizes
   memset(bucketSize, 0, sizeof(size_t)* 256);
   memset(bucketFrontCounter, 0, sizeof(size_t)* 256);
   memset(bucketEndCounter, 0, sizeof(size_t)* 256);
-  for(size_t i = 0; i < length; i++)
-    bucketSize[source[i]]++;
+  
+  for(i = 0; i < runsRem.size; i++) bucketSize[source[runsRem.S[i]]]++;
 
   //calculate bucket start and stops
   bucket[0] = data;
@@ -230,35 +238,23 @@ sequence SAIS(const u8 *source, const size_t sourceLength){
 
 //OPERATION/////////////////////////////////////////////////////////////
   /*set up L, S, and LMS metadata**************************************/
-  /*0 = undefined, 1 = L, 2 = S, 3 = LMS*/
-  LMSandLS[length-1] = 1;
   /*The paper stipulates an additional universally minimal character
-   * which is definitionally LMS, but the addition of a control
-   * character is pedantic and doesn't allow a general purpose
-   * implementation.  What is done here pre-empts that approach with
-   * forcing the last character to be a L characters, which keeps
-   * mathematical corectness but requires minor tweaks further on.*/
+   * which is definitionally LMS, but here it is simulated.*/
 
   //Assign characters' values right to left (end to beginning) for L, S,
   //and LMS
-  for(size_t i = length-2; i != ((size_t)0)-1; i--){
-    if(source[i] > source[i+1]){
-      LMSandLS[i] = 1;
-      if(LMSandLS[i+1] == 2){
-        LMSandLS[i+1] = 3;
-      }
-    }else if(source[i] < source[i+1]){
-      LMSandLS[i] = 2;
-    }else{
-      if(LMSandLS[i+1] == 1){
-        LMSandLS[i] = 1;
-      }else{
-        LMSandLS[i] = 2;
-      }
-    }
-  }
-  if(LMSandLS[0] == 2){
-    LMSandLS[0] = 3;
+  size_t loopUntil = runsRem.size - 2;
+  LMSandLS[runsRem.size-1] = _L_;
+  for(i = loopUntil; i != ((size_t)0)-1; i--)
+    LMSandLS[i] = source[runsRem.S[i]] > source[runsRem.S[i+1]] ? _L_ : _S_;
+  
+  i=0;
+  while(1){
+    while(i < loopUntil && LMSandLS[i] == _L_) i++;
+    if(i >= loopUntil) break;
+    LMSandLS[i++] = _LMS_;
+    while(i < loopUntil && LMSandLS[i] == _S_) i++;
+    if(i >= loopUntil) break;
   }
 
 #ifdef DEBUG
@@ -267,13 +263,14 @@ sequence SAIS(const u8 *source, const size_t sourceLength){
   fprintf(stderr, "\n\nAdding to buckets\n\n\n");
 #endif
 
+//TODO left off fixing up here
   /*Add entries to buckets*********************************************/
   //This is supposed to prepare the data to be induce sorted.
 
   //LMS type right-to-left scan -- Add LMS entries to the ends of
   //various buckets going from right to left.  The result is partially
   //full buckets with LMS entries in acending order.
-  for(size_t i = length-1; i != ((size_t)0)-1; i--){
+  for(size_t i = runsRem.size-1; i != ((size_t)0)-1; i--){
     if(LMSandLS[i] == 3){
       const unsigned char target = source[i];
       bucket[target][(bucketSize[target] - bucketEndCounter[target]) - 1] = i;
@@ -290,8 +287,8 @@ sequence SAIS(const u8 *source, const size_t sourceLength){
   //please refer to the paper.  Bounds checking was used in place of
   //checking for negative values so that -1 didn't have to be used,
   //allowing architentually maximal string length.
-	const unsigned char bucketLocation = source[length-1];
-  bucket[bucketLocation][0] = length-1;
+	const unsigned char bucketLocation = source[runsRem.S[runsRem.size-1]];
+  bucket[bucketLocation][0] = runsRem.size-1;
   bucketFrontCounter[bucketLocation]++;
   for(int i = 0; i < 256; i++){
     for(size_t j = 0; j < bucketFrontCounter[i]; j++){
