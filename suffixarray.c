@@ -264,7 +264,7 @@ sequence SAIS(const u8 *source, const size_t sourceLength, const sequence runsRe
 #endif
 
 //TODO left off fixing up here
-  /*Add entries to buckets*********************************************/
+/*PRIMEER***************************************Add entries to buckets*/
   //This is supposed to prepare the data to be induce sorted.
 
   //LMS type right-to-left scan -- Add LMS entries to the ends of
@@ -282,102 +282,114 @@ sequence SAIS(const u8 *source, const size_t sourceLength, const sequence runsRe
   printBucket(bucket, bucketSize);
 #endif
 
-  //inducing SA from SA1 step 2
+/*LOOP OVER UNTIL COMPLETE*********************************************/
+//TODO: there's some really ugly ways to make this run faster.
   //L type left-to-right scan, not exactly a direct reasoning for this,
   //please refer to the paper.  Bounds checking was used in place of
   //checking for negative values so that -1 didn't have to be used,
   //allowing architentually maximal string length.
-	const unsigned char bucketLocation = source[runsRem.S[runsRem.size-1]];
-  bucket[bucketLocation][0] = runsRem.size-1;
-  bucketFrontCounter[bucketLocation]++;
-  for(int i = 0; i < 256; i++){
-    for(size_t j = 0; j < bucketFrontCounter[i]; j++){
-      if(!bucket[i][j]) continue;
-      const size_t target = bucket[i][j]-1;
+  char goOn;
+  do{
+    goOn = 0;
+    memset(bucketFrontCounter, 0, sizeof(bucketFrontCounter));
+    memset(bucketEndCounter, 0, sizeof(bucketEndCounter));
+    const unsigned char bucketLocation = source[runsRem.S[runsRem.size-1]];
+    bucket[bucketLocation][0] = runsRem.size-1;
+    bucketFrontCounter[bucketLocation]++;
+    for(int i = 0; i < 256; i++){
+      for(size_t j = 0; j < bucketFrontCounter[i]; j++){
+        if(!bucket[i][j]) continue;
+        const size_t target = bucket[i][j]-1;
 
-      if(LMSandLS[target] == 1){
-        bucket[source[target]][bucketFrontCounter[source[target]]] = target;
-        bucketFrontCounter[source[target]]++;
+        if(LMSandLS[target] == 1){
+          if(bucket[source[target]][bucketFrontCounter[source[target]]] != target){
+            bucket[source[target]][bucketFrontCounter[source[target]]] = target;
+            goOn = 1;
+          }
+          bucketFrontCounter[source[target]]++;
+        }
+      }
+      for(size_t j = bucketSize[i] - bucketEndCounter[i]; j < bucketSize[i]; j++){
+        if(!bucket[i][j]) continue;
+        const size_t target = bucket[i][j]-1;
+
+        if(LMSandLS[target] == 1){
+          if(bucket[source[target]][bucketFrontCounter[source[target]]] != target){
+            bucket[source[target]][bucketFrontCounter[source[target]]] = target;
+            goOn = 1;
+          }
+          bucketFrontCounter[source[target]]++;
+        }
       }
     }
-    for(size_t j = bucketSize[i] - bucketEndCounter[i]; j < bucketSize[i]; j++){
-      if(!bucket[i][j]) continue;
-      const size_t target = bucket[i][j]-1;
-
-      if(LMSandLS[target] == 1){
-        bucket[source[target]][bucketFrontCounter[source[target]]] = target;
-        bucketFrontCounter[source[target]]++;
-      }
-    }
-  }
 
 #ifdef DEBUG
-  printBucket(bucket, bucketSize);
+    printBucket(bucket, bucketSize);
 #endif
 
-  //step 3 of setting up SA
-  //S type right to left scan.  Still difficult to follow reasoning.
-  //The paper seems to suggest looping over all values and some other
-  //various checking to make sure they're valid.  Bounds checking here
-  //is again used.  It also has the benefit of more effectively
-  //enforcing a reduction in the size of SA1 than the outlined
-  //algorithm.
-  for(int i = 255; i >= 0; i--){
-    if(bucketSize[i] == 0) continue;
-    for(size_t j = bucketSize[i] - 1; j >= bucketSize[i] - bucketEndCounter[i] && j != ((size_t)0)-1; j--){
-      if(!bucket[i][j]) continue;
-      const size_t target = bucket[i][j]-1;
+    //step 3 of setting up SA
+    //S type right to left scan.  Still difficult to follow reasoning.
+    //The paper seems to suggest looping over all values and some other
+    //various checking to make sure they're valid.  Bounds checking here
+    //is again used.  It also has the benefit of more effectively
+    //enforcing a reduction in the size of SA1 than the outlined
+    //algorithm.
+    for(int i = 255; i >= 0; i--){
+      if(bucketSize[i] == 0) continue;
+      for(size_t j = bucketSize[i] - 1; j >= bucketSize[i] - bucketEndCounter[i] && j != ((size_t)0)-1; j--){
+        if(!bucket[i][j]) continue;
+        const size_t target = bucket[i][j]-1;
 
-      if(LMSandLS[target] == 2){
-        unsigned char target2 = source[target];
-        bucket[target2][bucketSize[target2] - (bucketEndCounter[target2]+1)] = target;
-        bucketEndCounter[target2]++;
+        if(LMSandLS[target] == 2){
+          const unsigned char target2 = source[target];
+          if(bucket[target2][bucketSize[target2] - (bucketEndCounter[target2]+1)] != target){
+            bucket[target2][bucketSize[target2] - (bucketEndCounter[target2]+1)] = target;
+            goOn = 1;
+          }
+          bucketEndCounter[target2]++;
+        }
+      }
+
+      for(size_t j = bucketFrontCounter[i] - 1; j != ((size_t)0)-1; j--){
+        if(!bucket[i][j]) continue;
+        const size_t target = bucket[i][j]-1;
+
+        if(LMSandLS[target] == 2){
+          const unsigned char target2 = source[target];
+          if(bucket[target2][bucketSize[target2] - (bucketEndCounter[target2]+1)] != target){
+            bucket[target2][bucketSize[target2] - (bucketEndCounter[target2]+1)] = target;
+            goOn = 1;
+          }
+          bucketEndCounter[target2]++;
+        }
       }
     }
 
-    for(size_t j = bucketFrontCounter[i] - 1; j != ((size_t)0)-1; j--){
-      if(!bucket[i][j]) continue;
-      const size_t target = bucket[i][j]-1;
+#ifdef DEBUG
+    fprintf(stderr, "\n\nStarting Induction\n\n\n");
+#endif
 
-      if(LMSandLS[target] == 2){
-        const unsigned char target2 = source[target];
-        bucket[target2][bucketSize[target2] - (bucketEndCounter[target2]+1)] = target;
-        bucketEndCounter[target2]++;
+    memset(bucketEndCounter, 0, sizeof(size_t)* 256);
+    //S type right to left scan.
+    for(int i = 255; i >= 0; i--){
+      if(!bucketSize[i]) continue;
+      const size_t loopUntil = ((size_t)0)-1;
+      for(size_t j = bucketSize[i] - 1; j != loopUntil; j--){
+        if(!bucket[i][j]) continue;
+        const size_t target = bucket[i][j]-1;
+
+        if(LMSandLS[target] != 1){
+          const unsigned char target2 = source[target];
+          bucket[target2][(bucketSize[target2]-1) - bucketEndCounter[target2]] = target;
+          bucketEndCounter[target2]++;
+        }
       }
     }
-  }
 
 #ifdef DEBUG
-  printBucket(bucket, bucketSize);
+    printBucket(bucket, bucketSize);
 #endif
-
-  /*Start induction****************************************************/
-
-#ifdef DEBUG
-  fprintf(stderr, "\n\nStarting Induction\n\n\n");
-#endif
-
-  memset(bucketEndCounter, 0, sizeof(size_t)* 256);
-  //S type right to left scan.  Still difficult to follow reasoning, but
-  //it seems to work.
-  for(int i = 255; i >= 0; i--){
-    if(!bucketSize[i]) continue;
-    const size_t loopUntil = ((size_t)0)-1;
-    for(size_t j = bucketSize[i] - 1; j != loopUntil; j--){
-      if(!bucket[i][j]) continue;
-      const size_t target = bucket[i][j]-1;
-
-      if(LMSandLS[target] != 1){
-        const unsigned char target2 = source[target];
-        bucket[target2][(bucketSize[target2]-1) - bucketEndCounter[target2]] = target;
-        bucketEndCounter[target2]++;
-      }
-    }
-  }
-
-#ifdef DEBUG
-  printBucket(bucket, bucketSize);
-#endif
+  }while(goOn);
 
 //CLEAN UP//////////////////////////////////////////////////////////////
 
@@ -460,8 +472,6 @@ sequence removeRuns(const u8 *S, const size_t size){
 }
 
 
-
-
 /***********************************************************************
  * tweaked BPR2 to handle some changes nessicary for run removal
 ***********************************************************************/
@@ -494,8 +504,13 @@ sequence bpr2direct(const u8 *source, const size_t length){
 
 /***********************************************************************
  * Re-add runs of elements into SSA
+ * 
+ * proxy: the SSA arranged repeats removed indexes
+ * 
+ * 
+ * 
 ***********************************************************************/
-sequence addRuns(const u8 *input, const size_t length, sequence SPrime, sequence proxy){
+sequence addRuns(const u8 *input, const size_t length, sequence proxy){
 
 //DECLARATIONS//////////////////////////////////////////////////////////
   sequence toReturn;
@@ -503,20 +518,20 @@ sequence addRuns(const u8 *input, const size_t length, sequence SPrime, sequence
   
 //INITIALIZATIONS///////////////////////////////////////////////////////
   toReturn = initSequence(length);
+  toReturn.size = 0;
   
 //OPERATIONS////////////////////////////////////////////////////////////
-  for(size_t i = 0; i < length; i++){
-    if(proxy.S[i] < SPrime.size-1 
-       && SPrime.S[proxy.S[i]] - SPrime.S[proxy.S[i]+1] > 1){
-      size_t j = i++;
-      while(proxy.S[j] < SPrime.size-1 
-            && SPrime.S[proxy.S[j]] - SPrime.S[proxy.S[j]+1] > 1 
-            && input[SPrime.S[proxy.S[j]]] == input[SPrime.S[proxy.S[i]]])
-                                                                       {
-        j++;
-      }
-      
-      numToExpand = j-i;
+  for(size_t i = 1; i < proxy.size; i++){
+    const char isARepeat = input(proxy.S[i]) == input(proxy.S[i]-1);
+    if(!isARepeat){
+      toReturn.S[toReturn.size++] = proxy.S[i];
+    }else{
+      size_t j = i+1;
+      while(proxy.S[i] - numToExpand > 0 && 
+            input[proxy.S[i] - (numToExpand+1)] == 
+                                        input[proxy.S[i] - numToExpand])
+        numToExpand++;
+
       size_t *foundToRepeat;
       //Here we flatten the 2D array and will just use a more complex
       //accessing portion in order to avoid more calls to malloc.
@@ -527,8 +542,14 @@ sequence addRuns(const u8 *input, const size_t length, sequence SPrime, sequence
       //manner.
       
       //populate the entries to expand
-      for(size_t k = 0; k < numToExpand; k++){
-        
+      if(){//left expansion
+        for(size_t k = numToExpand-1; k != ((size_t)0)-1; k--){
+          toReturn.S[toReturn.size++] = proxy.S[i] - k;
+        }
+      }else{//right expansion
+        for(size_t k = 0; k < numToExpand; k++){
+          toReturn.S[toReturn.size++] = proxy.S[i] - k;
+        }
       }
       
     }
@@ -563,7 +584,7 @@ size_t* getSortedSuffixArray(const u8 *input, const size_t length){
   }else{
     intermediate = bpr2dereferenced(input, length, runsRem);
   
-    toReturn = addRuns(input, length, runsRem, intermediate);
+    toReturn = addRuns(input, length, intermediate);
     free(runsRem.S);
     free(intermediate.S);
   }
@@ -590,14 +611,14 @@ SuffixArray makeSuffixArray(const u8* inputSequence,
 #ifdef DEBUG
   assert(inputLength > 0);
   assert(inputSequence != NULL);
-  fprintf(stderr, "Initializing BWTArray\n"); fflush(stdout);
+  fprintf(stderr, "Initializing Suffix Array\n"); fflush(stdout);
 #endif
 
   SuffixArray toReturn = {inputSequence, false, inputLength,
                       getSortedSuffixArray(inputSequence, inputLength)};
 
 #ifdef DEBUG
-  fprintf(stderr, "Finished initializing BWTArray\n"); fflush(stdout);
+  fprintf(stderr, "Finished initializing Suffix Array\n"); fflush(stdout);
 #endif
 
   return toReturn;
