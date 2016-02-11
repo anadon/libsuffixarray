@@ -24,9 +24,9 @@
 
 #include "suffixarray.h"
 
-#ifdef DEBUG
+//#ifdef DEBUG
 #include <stdio.h>
-#endif
+//#endif
 
 ////////////////////////////////////////////////////////////////////////
 //  DEFINES  ///////////////////////////////////////////////////////////
@@ -40,6 +40,7 @@
 #define u8  unsigned char
 #define s16 signed short
 
+//1 for always SAIS, 0 for always working recursive bucket sort
 #define DEREFERENCE_BREAK_EVEN (0.0)
 
 
@@ -66,7 +67,6 @@ typedef struct{
   size_t startIndex, endIndex;
 }lSeqAbst, sSeqAbst, seqAbst; //Sequence Abstraction
 
-
 typedef struct{
   size_t size;
   lSeqAbst *bucket;
@@ -92,6 +92,149 @@ typedef struct{
   size_t size;
   size_t *S;
 }sequence;
+
+
+
+////////////////////////////////////////////////////////////////////////
+//  PRIVATE INTERFACE FUNCTIONS  ///////////////////////////////////////
+////////////////////////////////////////////////////////////////////////
+
+
+#ifdef DEBUG
+void printBucket(size_t **bucket, size_t oneD, size_t *twoD){
+  for(int i = 0; i < oneD; i++){
+    if(twoD[i] == 0) continue;
+    fprintf(stderr, "(");
+    for(size_t j = 0; j < twoD[i] - 1; j++){
+      fprintf(stderr, "%lu, ", bucket[i][j]);
+    }
+    fprintf(stderr, "%lu), ", bucket[i][twoD[i]-1]);
+  }
+  fprintf(stderr, "\n");
+  fflush(stdout);
+}
+
+
+void printArray(size_t *array, size_t size){
+  for(size_t i = 0; i < size; i++)
+    printf("%lu, \t", array[i]);
+  printf("\n");
+  fflush(stdout);
+}
+
+
+void printLMSandLS(unsigned char *LMSandLS, size_t length){
+  fprintf(stderr, "{");
+  for(size_t i = 0; i < length - 2; i++){
+    fprintf(stderr, "%c, ", LMSandLS[i] == _L_ ? 'L' : (LMSandLS[i] == _S_ ? 'S' : 'M'));
+  }
+  fprintf(stderr, "%c}\n", (LMSandLS[length-1] == _L_ ? 'L' : 'S'));
+  fflush(stdout);
+}
+#endif
+
+
+sequence initSequence(size_t length){
+  sequence toReturn;
+  toReturn.size = length;
+  toReturn.S = malloc(sizeof(*toReturn.S) * toReturn.size);
+  
+#ifdef DEBUG
+  if(length == 0){
+    fprintf(stderr, "initSequnce: invalid length argument\n");
+    fflush(stderr);
+    exit(errno);
+  }
+  if(toReturn.S == NULL){
+    fprintf(stderr, "initSequnce: failed to allocate space to sequence\n");
+    fflush(stderr);
+    exit(errno);
+  }
+#endif
+  
+  return toReturn;
+}
+
+
+/***********************************************************************
+ * Create array of indexes from S which omit all except the last 
+ * repeated value.
+***********************************************************************/
+sequence removeRuns(const u8 *S, const size_t size){
+  sequence toReturn = initSequence(size);
+  toReturn.size = 0;
+  for(size_t i = 0; i < size; i++) //if(S[i] != S[i+1])
+    toReturn.S[toReturn.size++] = i;
+  toReturn.S = realloc(toReturn.S, toReturn.size * sizeof(*toReturn.S));
+  return toReturn;
+}
+
+
+/***********************************************************************
+ * Re-add runs of elements into SSA
+ * 
+ * proxy: the SSA arranged repeats removed indexes
+ * 
+***********************************************************************/
+sequence addRuns(const u8 *input, const size_t length, sequence proxy){
+
+//DECLARATIONS//////////////////////////////////////////////////////////
+  sequence toReturn;
+  //size_t numToExpand;
+  
+//INITIALIZATIONS///////////////////////////////////////////////////////
+  toReturn = initSequence(length);
+  memcpy(toReturn.S, proxy.S, sizeof(*toReturn.S) * toReturn.size);
+  //toReturn.size = 0;
+  
+//OPERATIONS////////////////////////////////////////////////////////////
+  /*for(size_t i = 1; i < proxy.size; i++){
+    const char isARepeat = input[proxy.S[i]] == input[proxy.S[i]-1];
+    if(!isARepeat){
+      toReturn.S[toReturn.size++] = proxy.S[i];
+    }else{
+      //size_t j = i+1;
+      while(proxy.S[i] - numToExpand > 0 && 
+            input[proxy.S[i] - (numToExpand+1)] == 
+                                        input[proxy.S[i] - numToExpand])
+        numToExpand++;
+
+      size_t *foundToRepeat;
+      //Here we flatten the 2D array and will just use a more complex
+      //accessing portion in order to avoid more calls to malloc.
+      foundToRepeat = malloc(sizeof(*foundToRepeat) * numToExpand * 3);
+      //NOTE: in parsing as entries become exausted, the pointers for
+      //reading and writing should be seperate so that in the course of 
+      //each expantion iteration old entries are removed in an efficient
+      //manner.
+      
+      //populate the entries to expand
+      if(proxy.S[i]+1 < length || input[proxy.S[i]] < input[proxy.S[i]+1]){//left expansion
+        for(size_t k = numToExpand-1; k != ((size_t)0)-1; k--){
+          toReturn.S[toReturn.size++] = proxy.S[i] - k;
+        }
+      }else{//right expansion
+        for(size_t k = 0; k < numToExpand; k++){
+          toReturn.S[toReturn.size++] = proxy.S[i] - k;
+        }
+      }
+      
+    }
+  }*/
+
+//CLEAN UP//////////////////////////////////////////////////////////////
+
+
+  return toReturn;
+}
+
+
+u8 getAlphabetSize(const u8 *input, const size_t size){
+  u8 toReturn = 0;
+  for(size_t i = 0; i < size; i++) 
+    toReturn = input[i] > toReturn ? input[i] : toReturn;
+  return toReturn+1;
+}
 
 
 ////////////////////////////////////////////////////////////////////////
@@ -196,43 +339,52 @@ void recursiveBucketSort(size_t *bucket, const size_t bucketSize,
 * @source  :The sequence to construct the suffix array on.
 * @runsRem :
 * 
+* @alphabetSize : not actually alphabet size, but highest value seen in 
+*                 alphabet.  Might change in future.
+* 
 * 
 * Notes
 * 0 = undefined, 1 = L, 2 = S, 3 = {LMS, M}
 ***********************************************************************/
-sequence SAIS(const u8 *source, const size_t sourceLength, const sequence runsRem){
-  
+sequence SAIS(const u8 *source, const size_t sourceLength, 
+                        const sequence runsRem, const u8 alphabetSize){
 //DECLARATIONS//////////////////////////////////////////////////////////
-  sequence toReturn;
-  size_t *bucket[256];
-  size_t bucketSize[256];
-  size_t bucketFrontCounter[256];
-  size_t bucketEndCounter[256];
+  sequence toReturn, sanityCheck;
+  size_t **bucket;
+  size_t **oldBucket;
   size_t i;
+  size_t *bucketSize;
+  size_t *bucketFrontCounter;
+  size_t *bucketEndCounter;
   
   unsigned char *LMSandLS;
 
 ////INITIALIZATION//////////////////////////////////////////////////////
-  size_t *data = malloc(sizeof(size_t) * runsRem.size);
-  LMSandLS = malloc(sizeof(unsigned char) * runsRem.size);
+  LMSandLS  = malloc(sizeof(unsigned char) * runsRem.size);
+  bucket    = malloc(sizeof(*bucket) * alphabetSize);
+  oldBucket = malloc(sizeof(*oldBucket) * alphabetSize);
+  bucketSize = calloc(sizeof(size_t)* alphabetSize, 1);
+  bucketFrontCounter = calloc(sizeof(size_t)* alphabetSize, 1);
+  bucketEndCounter = calloc(sizeof(size_t)* alphabetSize, 1);
+  sanityCheck = initSequence(runsRem.size);
+  memset(sanityCheck.S, 0, sizeof(*sanityCheck.S) * sanityCheck.size);
+  sanityCheck.size = 0;
 
   /*prescan for buckets************************************************/
   //calculate bucket sizes
-  memset(bucketSize, 0, sizeof(size_t)* 256);
-  memset(bucketFrontCounter, 0, sizeof(size_t)* 256);
-  memset(bucketEndCounter, 0, sizeof(size_t)* 256);
   
   for(i = 0; i < runsRem.size; i++) bucketSize[source[runsRem.S[i]]]++;
 
   //calculate bucket start and stops
-  bucket[0] = data;
-  for(short i = 1; i < 256; i++)
-    bucket[i] = &bucket[i-1][bucketSize[i-1]];
+  for(short i = 0; i < alphabetSize; i++){
+    bucket[i] = calloc(sizeof(size_t), bucketSize[i]);
+    oldBucket[i] = calloc(sizeof(size_t), bucketSize[i]);
+  }
 
 #ifdef DEBUG
   //first place where bucket data can be printed
-  fprintf(stderr, "%lu\n", length);
-  printBucket(bucket, bucketSize);
+  fprintf(stderr, "%lu\n", runsRem.size);
+  printBucket(bucket, alphabetSize, bucketSize);
 #endif
 
 
@@ -258,29 +410,29 @@ sequence SAIS(const u8 *source, const size_t sourceLength, const sequence runsRe
   }
 
 #ifdef DEBUG
-  printLMSandLS(LMSandLS, length);
+  printLMSandLS(LMSandLS, runsRem.size);
 
-  fprintf(stderr, "\n\nAdding to buckets\n\n\n");
+  fprintf(stderr, "\n\nAdding to buckets\n\n");
 #endif
 
-//TODO left off fixing up here
 /*PRIMEER***************************************Add entries to buckets*/
   //This is supposed to prepare the data to be induce sorted.
 
+  memcpy(bucketEndCounter, bucketSize, sizeof(*bucketEndCounter) * alphabetSize);
+  
+  bucket[source[runsRem.S[runsRem.size-1]]][0] = runsRem.size-1;
+  //bucketFrontCounter[bucketLocation]++;
+  
   //LMS type right-to-left scan -- Add LMS entries to the ends of
   //various buckets going from right to left.  The result is partially
   //full buckets with LMS entries in acending order.
   for(size_t i = runsRem.size-1; i != ((size_t)0)-1; i--){
-    if(LMSandLS[i] == 3){
-      const unsigned char target = source[i];
-      bucket[target][(bucketSize[target] - bucketEndCounter[target]) - 1] = i;
-      bucketEndCounter[target]++;
+    if(LMSandLS[i] == _LMS_){
+      const unsigned char target = source[runsRem.S[i]];
+      bucket[target][--bucketEndCounter[target]] = i;
     }
   }
-
-#ifdef DEBUG
-  printBucket(bucket, bucketSize);
-#endif
+  
 
 /*LOOP OVER UNTIL COMPLETE*********************************************/
 //TODO: there's some really ugly ways to make this run faster.
@@ -291,183 +443,101 @@ sequence SAIS(const u8 *source, const size_t sourceLength, const sequence runsRe
   char goOn;
   do{
     goOn = 0;
-    memset(bucketFrontCounter, 0, sizeof(bucketFrontCounter));
-    memset(bucketEndCounter, 0, sizeof(bucketEndCounter));
-    const unsigned char bucketLocation = source[runsRem.S[runsRem.size-1]];
-    bucket[bucketLocation][0] = runsRem.size-1;
-    bucketFrontCounter[bucketLocation]++;
-    for(int i = 0; i < 256; i++){
-      for(size_t j = 0; j < bucketFrontCounter[i]; j++){
-        if(!bucket[i][j]) continue;
-        const size_t target = bucket[i][j]-1;
-
-        if(LMSandLS[target] == 1){
-          if(bucket[source[target]][bucketFrontCounter[source[target]]] != target){
-            bucket[source[target]][bucketFrontCounter[source[target]]] = target;
-            goOn = 1;
-          }
-          bucketFrontCounter[source[target]]++;
-        }
-      }
-      for(size_t j = bucketSize[i] - bucketEndCounter[i]; j < bucketSize[i]; j++){
-        if(!bucket[i][j]) continue;
-        const size_t target = bucket[i][j]-1;
-
-        if(LMSandLS[target] == 1){
-          if(bucket[source[target]][bucketFrontCounter[source[target]]] != target){
-            bucket[source[target]][bucketFrontCounter[source[target]]] = target;
-            goOn = 1;
-          }
-          bucketFrontCounter[source[target]]++;
-        }
-      }
-    }
-
-#ifdef DEBUG
-    printBucket(bucket, bucketSize);
-#endif
+    memset(sanityCheck.S, 0, sizeof(*sanityCheck.S) * runsRem.size);
+    sanityCheck.size = 0;
 
     //step 3 of setting up SA
-    //S type right to left scan.  Still difficult to follow reasoning.
-    //The paper seems to suggest looping over all values and some other
-    //various checking to make sure they're valid.  Bounds checking here
-    //is again used.  It also has the benefit of more effectively
-    //enforcing a reduction in the size of SA1 than the outlined
-    //algorithm.
-    for(int i = 255; i >= 0; i--){
-      if(bucketSize[i] == 0) continue;
-      for(size_t j = bucketSize[i] - 1; j >= bucketSize[i] - bucketEndCounter[i] && j != ((size_t)0)-1; j--){
+    //L type right to left scan.
+    memcpy(bucketEndCounter, bucketSize, sizeof(*bucketEndCounter) * alphabetSize);
+    for(i = alphabetSize-1; i != ((size_t)0)-1 ; i--){
+      for(size_t j = bucketSize[i]-1; j != ((size_t)0)-1; j--){
         if(!bucket[i][j]) continue;
         const size_t target = bucket[i][j]-1;
 
-        if(LMSandLS[target] == 2){
-          const unsigned char target2 = source[target];
-          if(bucket[target2][bucketSize[target2] - (bucketEndCounter[target2]+1)] != target){
-            bucket[target2][bucketSize[target2] - (bucketEndCounter[target2]+1)] = target;
-            goOn = 1;
+        if(LMSandLS[target] == _L_ || LMSandLS[target] == _LMS_){
+          char KILLYOSELF = 0;
+          if(source[runsRem.S[target]] == source[runsRem.S[runsRem.size-1]] && bucketEndCounter[source[runsRem.S[target]]]-1 == 0){
+            KILLYOSELF = 1;
+            printf("Trying to write over something you're blatently not supposed to write over.\n");
           }
-          bucketEndCounter[target2]++;
-        }
-      }
-
-      for(size_t j = bucketFrontCounter[i] - 1; j != ((size_t)0)-1; j--){
-        if(!bucket[i][j]) continue;
-        const size_t target = bucket[i][j]-1;
-
-        if(LMSandLS[target] == 2){
-          const unsigned char target2 = source[target];
-          if(bucket[target2][bucketSize[target2] - (bucketEndCounter[target2]+1)] != target){
-            bucket[target2][bucketSize[target2] - (bucketEndCounter[target2]+1)] = target;
-            goOn = 1;
+          for(size_t k = 0; k < sanityCheck.size; k++)
+            if(sanityCheck.S[k] == target){
+              KILLYOSELF=1;
+              printf("trying to write a %lu a second time.\n", target);
+            }
+          
+          if(KILLYOSELF){
+            printf("KILL YO SELF in r to l\n");
+            exit(1);
           }
-          bucketEndCounter[target2]++;
+          const unsigned char target2 = source[runsRem.S[target]];
+          bucket[target2][--bucketEndCounter[target2]] = target;
+          sanityCheck.S[sanityCheck.size++] = target;
         }
       }
     }
 
 #ifdef DEBUG
-    fprintf(stderr, "\n\nStarting Induction\n\n\n");
+    printBucket(bucket, alphabetSize, bucketSize);
 #endif
-
-    memset(bucketEndCounter, 0, sizeof(size_t)* 256);
-    //S type right to left scan.
-    for(int i = 255; i >= 0; i--){
-      if(!bucketSize[i]) continue;
-      const size_t loopUntil = ((size_t)0)-1;
-      for(size_t j = bucketSize[i] - 1; j != loopUntil; j--){
+    
+    //S type left to right scan.
+    memset(bucketFrontCounter, 0, sizeof(*bucketFrontCounter) * alphabetSize);
+    //bucket[source[runsRem.S[runsRem.size-1]]][0] = runsRem.size-1;
+    bucketFrontCounter[source[runsRem.S[runsRem.size-1]]] = 1;//protect last index
+  
+    for(int i = 0; i < alphabetSize; i++){
+      for(size_t j = 0; j < bucketSize[i]; j++){
         if(!bucket[i][j]) continue;
         const size_t target = bucket[i][j]-1;
-
-        if(LMSandLS[target] != 1){
-          const unsigned char target2 = source[target];
-          bucket[target2][(bucketSize[target2]-1) - bucketEndCounter[target2]] = target;
-          bucketEndCounter[target2]++;
+        
+        if(LMSandLS[target] == _S_){
+          char KILLYOSELF = 0;
+          if(source[runsRem.S[target]] == source[runsRem.S[runsRem.size-1]] && bucketEndCounter[source[runsRem.S[target]]]-1 == 0){
+            KILLYOSELF = 1;
+            printf("Trying to write over something you're blatently not supposed to write over.\n");
+          }
+          for(size_t k = 0; k < sanityCheck.size; k++)
+            if(sanityCheck.S[k] == target){
+              KILLYOSELF=1;
+              printf("trying to write a %lu a second time.\n", target);
+            }
+          
+          if(KILLYOSELF){
+            printf("KILL YO SELF in l to r\n");
+            exit(1);
+          }
+          const unsigned char target2 = source[runsRem.S[target]];
+          bucket[target2][bucketFrontCounter[target2]++] = target;
+          sanityCheck.S[sanityCheck.size++] = target;
         }
       }
     }
 
-#ifdef DEBUG
-    printBucket(bucket, bucketSize);
-#endif
+    for(i = 0; i < alphabetSize; i ++)
+      if(memcmp(bucket[i], oldBucket[i], bucketSize[i] * sizeof(size_t))){
+        for(size_t j = i; j < alphabetSize; j++)
+          if(bucketSize[j])
+            memcpy(oldBucket[j], bucket[j], sizeof(*bucket) * bucketSize[j]);
+        goOn = 1;
+        break;
+      }
+
   }while(goOn);
+
+#ifdef DEBUG
+    printBucket(bucket, alphabetSize, bucketSize);
+#endif
 
 //CLEAN UP//////////////////////////////////////////////////////////////
 
   free(LMSandLS);
   
-  return toReturn;
-}
-
-////////////////////////////////////////////////////////////////////////
-//  PRIVATE INTERFACE FUNCTIONS  ///////////////////////////////////////
-////////////////////////////////////////////////////////////////////////
-
-
-#ifdef DEBUG
-void printBucket(size_t *bucket[256], size_t bucketSize[256]){
-  for(int i = 0; i < 256; i++){
-    if(bucketSize[i] == 0) continue;
-    fprintf(stderr, "(");
-    for(size_t j = 0; j < bucketSize[i] - 1; j++){
-      fprintf(stderr, "%lu, ", bucket[i][j]);
-    }
-    fprintf(stderr, "%lu), ", bucket[i][bucketSize[i]-1]);
-  }
-  fprintf(stderr, "\n");
-  fflush(stdout);
-}
-
-void printArray(size_t *array, size_t size){
-  for(size_t i = 0; i < size; i++)
-    printf("%lu, \t", array[i]);
-  printf("\n");
-  fflush(stdout);
-}
-
-void printLMSandLS(u8* LMSandLS, size_t length){
-  fprintf(stderr, "{");
-  for(size_t i = 0; i < length - 2; i++){
-    fprintf(stderr, "%c, ", LMSandLS[i] == _L_ ? 'L' : (LMSandLS[i] == _S_ ? 'S' : 'M'));
-  }
-  fprintf(stderr, "%c}\n", (LMSandLS[length-1] == _L_ ? 'L' : 'S'));
-  fflush(stdout);
-}
-#endif
-
-
-
-sequence initSequence(size_t length){
-  sequence toReturn;
-  toReturn.size = length;
-  toReturn.S = malloc(sizeof(*toReturn.S) * toReturn.size);
-  
-#ifdef DEBUG
-  if(length == 0){
-    fprintf(stderr, "initSequnce: invalid length argument\n");
-    fflush(stderr);
-    exit(errno);
-  }
-  if(toReturn.S == NULL){
-    fprintf(stderr, "initSequnce: failed to allocate space to sequence\n");
-    fflush(stderr);
-    exit(errno);
-  }
-#endif
-  
-  return toReturn;
-}
-
-
-/***********************************************************************
- * Create array of indexes from S which omit all except the last 
- * repeated value.
-***********************************************************************/
-sequence removeRuns(const u8 *S, const size_t size){
-  sequence toReturn = initSequence(size);
+  toReturn = initSequence(runsRem.size);
   toReturn.size = 0;
-  for(size_t i = 0; i < size-1; i++) if(S[i] != S[i+1])
-    toReturn.S[toReturn.size++] = i;
-  toReturn.S = realloc(toReturn.S, toReturn.size * sizeof(*toReturn.S));
+  for(i = 0; i < alphabetSize; i++)
+    for(size_t j = 0; j < bucketSize[i]; j++)
+      toReturn.S[toReturn.size++] = bucket[i][j];
   return toReturn;
 }
 
@@ -503,67 +573,6 @@ sequence bpr2direct(const u8 *source, const size_t length){
 
 
 /***********************************************************************
- * Re-add runs of elements into SSA
- * 
- * proxy: the SSA arranged repeats removed indexes
- * 
- * 
- * 
-***********************************************************************/
-sequence addRuns(const u8 *input, const size_t length, sequence proxy){
-
-//DECLARATIONS//////////////////////////////////////////////////////////
-  sequence toReturn;
-  size_t numToExpand;
-  
-//INITIALIZATIONS///////////////////////////////////////////////////////
-  toReturn = initSequence(length);
-  toReturn.size = 0;
-  
-//OPERATIONS////////////////////////////////////////////////////////////
-  for(size_t i = 1; i < proxy.size; i++){
-    const char isARepeat = input(proxy.S[i]) == input(proxy.S[i]-1);
-    if(!isARepeat){
-      toReturn.S[toReturn.size++] = proxy.S[i];
-    }else{
-      size_t j = i+1;
-      while(proxy.S[i] - numToExpand > 0 && 
-            input[proxy.S[i] - (numToExpand+1)] == 
-                                        input[proxy.S[i] - numToExpand])
-        numToExpand++;
-
-      size_t *foundToRepeat;
-      //Here we flatten the 2D array and will just use a more complex
-      //accessing portion in order to avoid more calls to malloc.
-      foundToRepeat = malloc(sizeof(*foundToRepeat) * numToExpand * 3);
-      //NOTE: in parsing as entries become exausted, the pointers for
-      //reading and writing should be seperate so that in the course of 
-      //each expantion iteration old entries are removed in an efficient
-      //manner.
-      
-      //populate the entries to expand
-      if(){//left expansion
-        for(size_t k = numToExpand-1; k != ((size_t)0)-1; k--){
-          toReturn.S[toReturn.size++] = proxy.S[i] - k;
-        }
-      }else{//right expansion
-        for(size_t k = 0; k < numToExpand; k++){
-          toReturn.S[toReturn.size++] = proxy.S[i] - k;
-        }
-      }
-      
-    }
-  }
-
-//CLEAN UP//////////////////////////////////////////////////////////////
-
-
-  return toReturn;
-}
-
-
-
-/***********************************************************************
  * Switching to BPR2 over SAIS because SAIS became unruley and BPR2 
  * seems to have better performance characteristics.  Still 
  * investigating.
@@ -582,7 +591,8 @@ size_t* getSortedSuffixArray(const u8 *input, const size_t length){
     free(runsRem.S);
     toReturn = bpr2direct(input, length);
   }else{
-    intermediate = bpr2dereferenced(input, length, runsRem);
+    u8 alphabetSize = getAlphabetSize(input, length);
+    intermediate = SAIS(input, length, runsRem, alphabetSize);
   
     toReturn = addRuns(input, length, intermediate);
     free(runsRem.S);
@@ -594,10 +604,6 @@ size_t* getSortedSuffixArray(const u8 *input, const size_t length){
   
   return toReturn.S;
 }
-
-
-
-
 
 
 ////////////////////////////////////////////////////////////////////////

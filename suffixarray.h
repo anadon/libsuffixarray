@@ -131,6 +131,10 @@ void freeEnhancedSuffixArray(EnhancedSuffixArray *toFree);
  * Dump table contents for debugging purposes
  **********************************************************************/
 void printSuffixArrayContainer(EnhancedSuffixArray toDump);
+
+void printBucket(size_t **bucket, size_t oneD, size_t *twoD);
+
+void printLMSandLS(unsigned char *LMSandLS, size_t length);
 #endif
 
 
